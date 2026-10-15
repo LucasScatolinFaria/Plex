@@ -36,10 +36,10 @@ const PODIUM = [
   { place: 3, height: 58, avatar: 52, colors: ["#FDBA74", "#C2703A"] },
 ];
 
-// Os outros perfis salvos neste aparelho (o jogador atual vem do contexto, sempre atualizado).
+// Os outros perfis que já entraram neste aparelho (o jogador atual vem do contexto, sempre atualizado).
 async function loadOtherPlayers(user) {
-  const users = await loadJSON("users", {});
-  const accounts = Object.values(users).filter((account) => account.id !== user.id);
+  const profiles = await loadJSON("profiles", {});
+  const accounts = Object.values(profiles).filter((account) => account.id !== user.id);
   const players = await Promise.all(
     accounts.map(async ({ id, name, avatar }) => ({
       id,

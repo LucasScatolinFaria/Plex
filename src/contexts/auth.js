@@ -1,17 +1,75 @@
 import { createContext, useEffect, useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  deleteUser,
+  signInWithEmailAndPassword,
+  signOut as signOutOfFirebase,
+} from "firebase/auth";
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 
-import { GUEST_AVATAR } from "../data/avatars";
-import { randomSalt, sha256 } from "../services/hash";
+import { AVATARS, GUEST_AVATAR } from "../data/avatars";
+import { auth, db } from "../services/firebase";
 import { loadJSON, removeKey, saveJSON } from "../services/storage";
 
 export const AuthContext = createContext({});
 
-// As contas ficam salvas só neste aparelho (não existe servidor).
+// As contas ficam no Firebase: o Authentication cuida do e-mail e da senha, e o Firestore guarda o perfil
+// de cada jogador em users/{uid}. O visitante continua existindo só neste aparelho.
 const GUEST = { id: "guest", name: "Visitante", email: null, avatar: GUEST_AVATAR.id, guest: true };
+
+const AUTH_ERRORS = {
+  "auth/invalid-credential": "E-mail ou senha incorretos.",
+  "auth/wrong-password": "E-mail ou senha incorretos.",
+  "auth/user-not-found": "E-mail ou senha incorretos.",
+  "auth/invalid-email": "Digite um e-mail válido.",
+  "auth/email-already-in-use": "Já existe uma conta com esse e-mail.",
+  "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+  "auth/user-disabled": "Esta conta foi desativada.",
+  "auth/too-many-requests": "Muitas tentativas seguidas. Espere um pouquinho e tente de novo.",
+  "auth/network-request-failed": "Sem conexão com a internet. Confira e tente de novo.",
+};
 
 const normalizeEmail = (email) => email.trim().toLowerCase();
 
-const publicUser = ({ id, name, email, avatar, createdAt }) => ({ id, name, email, avatar, createdAt });
+const profileRef = (uid) => doc(db, "users", uid);
+
+const profileData = (account, { name, avatar }) => ({
+  name,
+  email: account.email,
+  avatar,
+  createdAt: serverTimestamp(),
+});
+
+// troca os códigos de erro do Firebase por mensagens que dá para mostrar na tela
+async function withAuthErrors(request) {
+  try {
+    return await request;
+  } catch (error) {
+    throw new Error(AUTH_ERRORS[error.code] || "Não deu certo agora. Tente de novo.");
+  }
+}
+
+// Cópia dos perfis que já entraram neste aparelho: alimenta o ranking e deixa o app abrir sem internet.
+async function rememberProfile({ id, name, avatar }) {
+  const profiles = await loadJSON("profiles", {});
+  await saveJSON("profiles", { ...profiles, [id]: { id, name, avatar } });
+}
+
+// Perfil vindo do Firestore. Sem internet, fica a cópia deste aparelho; se a conta ainda não tem
+// perfil (ex.: foi criada direto no console do Firebase), nasce um perfil básico.
+async function loadProfile(account) {
+  const saved = (await loadJSON("profiles", {}))[account.uid];
+  let profile = saved || { name: account.email.split("@")[0].slice(0, 30), avatar: AVATARS[0].id };
+  try {
+    const snapshot = await getDoc(profileRef(account.uid));
+    if (snapshot.exists()) profile = snapshot.data();
+    else await setDoc(profileRef(account.uid), profileData(account, profile));
+  } catch (error) {}
+
+  const user = { id: account.uid, name: profile.name, email: account.email, avatar: profile.avatar };
+  await rememberProfile(user);
+  return user;
+}
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -21,12 +79,12 @@ function AuthProvider({ children }) {
 
   useEffect(() => {
     async function restoreSession() {
-      const sessionId = await loadJSON("session");
-      if (sessionId === GUEST.id) {
+      if ((await loadJSON("session")) === GUEST.id) {
         setUser(GUEST);
-      } else if (sessionId) {
-        const users = await loadJSON("users", {});
-        if (users[sessionId]) setUser(publicUser(users[sessionId]));
+      } else {
+        // o Firebase lembra quem estava conectado neste aparelho
+        await auth.authStateReady();
+        if (auth.currentUser) setUser(await loadProfile(auth.currentUser));
       }
       setLoading(false);
     }
@@ -34,49 +92,38 @@ function AuthProvider({ children }) {
   }, []);
 
   async function signIn(email, password) {
-    const users = await loadJSON("users", {});
-    const account = Object.values(users).find((item) => item.email === normalizeEmail(email));
-    if (!account || sha256(account.salt + password) !== account.passwordHash) {
-      throw new Error("E-mail ou senha incorretos.");
-    }
-    await saveJSON("session", account.id);
+    const { user: account } = await withAuthErrors(
+      signInWithEmailAndPassword(auth, normalizeEmail(email), password)
+    );
     setGuestUpgrade(false);
-    setUser(publicUser(account));
+    setUser(await loadProfile(account));
   }
 
   async function signUp({ name, email, password, avatar }) {
-    const users = await loadJSON("users", {});
-    const cleanEmail = normalizeEmail(email);
-    if (Object.values(users).some((item) => item.email === cleanEmail)) {
-      throw new Error("Já existe uma conta com esse e-mail.");
+    const { user: account } = await withAuthErrors(
+      createUserWithEmailAndPassword(auth, normalizeEmail(email), password)
+    );
+    const profile = { id: account.uid, name: name.trim(), email: account.email, avatar };
+
+    try {
+      await setDoc(profileRef(account.uid), profileData(account, profile));
+    } catch (error) {
+      // conta sem perfil fica pela metade: desfaz para dar para tentar de novo com o mesmo e-mail
+      await deleteUser(account).catch(() => signOutOfFirebase(auth));
+      throw new Error("Não foi possível salvar a conta agora. Tente de novo.");
     }
-
-    const id = `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    const salt = randomSalt();
-    const account = {
-      id,
-      name: name.trim(),
-      email: cleanEmail,
-      avatar,
-      salt,
-      passwordHash: sha256(salt + password),
-      createdAt: new Date().toISOString(),
-    };
-
-    const saved = await saveJSON("users", { ...users, [id]: account });
-    if (!saved) throw new Error("Não foi possível salvar a conta neste aparelho.");
 
     if (guestUpgrade) {
       const guestProgress = await loadJSON(`progress:${GUEST.id}`);
       if (guestProgress) {
-        await saveJSON(`progress:${id}`, guestProgress);
+        await saveJSON(`progress:${account.uid}`, guestProgress);
         await removeKey(`progress:${GUEST.id}`);
       }
     }
 
-    await saveJSON("session", id);
+    await rememberProfile(profile);
     setGuestUpgrade(false);
-    setUser(publicUser(account));
+    setUser(profile);
   }
 
   async function signInAsGuest() {
@@ -86,6 +133,7 @@ function AuthProvider({ children }) {
 
   async function signOut() {
     await removeKey("session");
+    await signOutOfFirebase(auth);
     setUser(null);
   }
 
@@ -95,11 +143,12 @@ function AuthProvider({ children }) {
   }
 
   async function updateProfile(changes) {
-    const users = await loadJSON("users", {});
-    if (!users[user.id]) return;
-    const account = { ...users[user.id], ...changes };
-    await saveJSON("users", { ...users, [user.id]: account });
-    setUser(publicUser(account));
+    if (!user || user.guest) return;
+    const next = { ...user, ...changes };
+    setUser(next);
+    await rememberProfile(next);
+    // não espera a resposta do Firestore: sem internet ele envia a mudança quando a conexão voltar
+    updateDoc(profileRef(user.id), changes).catch(() => {});
   }
 
   return (

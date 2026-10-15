@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Banco de dados do SESI Kids (Cloud Firestore).
+// A senha nunca passa por aqui: quem cuida do e-mail e da senha é o Firebase Authentication.
+// users/{uid}: o perfil de cada jogador (nome, e-mail, avatar e data de criação).
+// Cada jogador só lê e altera o próprio perfil; todo o resto do banco fica fechado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && validProfile()
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId) && validProfile()
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validProfile() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["name", "email", "avatar", "createdAt"])
+        && data.keys().hasAll(["name", "email", "avatar", "createdAt"])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 60
+        && data.email == request.auth.token.email
+        && data.avatar is string && data.avatar.size() <= 30;
+    }
+  }
+}

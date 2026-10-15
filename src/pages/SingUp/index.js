@@ -141,7 +141,7 @@ export default function SignUp() {
 
                 <Button title="Cadastrar" icon="sparkles" size="lg" full disabled={loading} onPress={handleSignUp} />
 
-                <Note>🔒 Sua conta fica guardada só neste aparelho.</Note>
+                <Note>🔒 Sua conta fica guardada com segurança na nuvem.</Note>
 
                 <Link onPress={goToSignIn}>
                   <LinkText>
