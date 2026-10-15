@@ -1,13 +1,16 @@
+import { useContext } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import TabBar from "../components/TabBar";
+import { AuthContext } from "../contexts/auth";
 import { GAMES } from "../data/games";
 import useLayout from "../hooks/useLayout";
 import Achievements from "../pages/Achievements";
 import Home from "../pages/Home";
 import Profile from "../pages/Profile";
 import Ranking from "../pages/Ranking";
+import SignUp from "../pages/SingUp";
 import BugHunt from "../pages/games/BugHunt";
 import Clock from "../pages/games/Clock";
 import Compare from "../pages/games/Compare";
@@ -70,6 +73,8 @@ function Tabs() {
 }
 
 function AppRoutes() {
+  const { user } = useContext(AuthContext);
+
   return (
     <AppStack.Navigator
       screenOptions={{
@@ -79,6 +84,11 @@ function AppRoutes() {
       }}
     >
       <AppStack.Screen name="Tabs" component={Tabs} options={{ title: "Jogos" }} />
+      {/* o visitante cria a conta sem sair do app ("Guardar meu progresso"); quando a conta fica
+          pronta a tela some e o app volta para onde estava */}
+      {user?.guest ? (
+        <AppStack.Screen name="SignUp" component={SignUp} options={{ title: "Criar conta" }} />
+      ) : null}
       {GAMES.map((game) => (
         <AppStack.Screen
           key={game.id}

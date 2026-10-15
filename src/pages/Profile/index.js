@@ -5,7 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import Appear from "../../components/Appear";
 import Avatar from "../../components/Avatar";
-import Bouncy from "../../components/Bouncy";
+import AvatarPicker from "../../components/AvatarPicker";
 import Button from "../../components/Button";
 import Field from "../../components/Field";
 import ProgressBar from "../../components/ProgressBar";
@@ -19,7 +19,7 @@ import { GAMES, TOTAL_STARS, maxStars } from "../../data/games";
 import { fx } from "../../services/feedback";
 import { colors } from "../../theme";
 import { currentStreak, gameStars, levelInfo, playsOf, totalStars } from "../../utils/progress";
-import { AvatarGrid, AvatarRing, Label } from "../SingUp/style";
+import { Label } from "../SingUp/style";
 import {
   Danger,
   DangerLink,
@@ -58,7 +58,7 @@ function bestScore(progress, game) {
 
 export default function Profile() {
   const navigation = useNavigation();
-  const { user, signOut, upgradeGuest, updateProfile } = useContext(AuthContext);
+  const { user, signOut, updateProfile } = useContext(AuthContext);
   const { progress, resetProgress } = useContext(ProgressContext);
   const { sound, vibration, effects, toggleSetting } = useContext(SettingsContext);
 
@@ -66,6 +66,7 @@ export default function Profile() {
   const [name, setName] = useState(user?.name || "");
   const [avatar, setAvatar] = useState(user?.avatar);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [confirmingExit, setConfirmingExit] = useState(false);
 
   if (!user) return null;
 
@@ -117,7 +118,12 @@ export default function Profile() {
           </LevelBox>
 
           {user.guest ? (
-            <Button title="Guardar meu progresso" icon="sparkles" full onPress={upgradeGuest} />
+            <Button
+              title="Guardar meu progresso"
+              icon="sparkles"
+              full
+              onPress={() => navigation.navigate("SignUp")}
+            />
           ) : editing ? null : (
             <Button title="Editar perfil" icon="create-outline" tone="ghost" size="sm" onPress={openEditor} />
           )}
@@ -125,22 +131,7 @@ export default function Profile() {
           {editing ? (
             <Editor>
               <Label>Seu avatar</Label>
-              <AvatarGrid accessibilityRole="radiogroup">
-                {AVATARS.map((item) => (
-                  <Bouncy
-                    key={item.id}
-                    onPress={() => setAvatar(item.id)}
-                    sound="pop"
-                    accessibilityRole="radio"
-                    accessibilityLabel={`Avatar ${item.id}`}
-                    accessibilityState={{ selected: avatar === item.id }}
-                  >
-                    <AvatarRing $selected={avatar === item.id}>
-                      <Avatar id={item.id} size={44} ring={false} />
-                    </AvatarRing>
-                  </Bouncy>
-                ))}
-              </AvatarGrid>
+              <AvatarPicker avatars={AVATARS} value={avatar} onChange={setAvatar} size={44} />
               <Label>Seu nome</Label>
               <Field
                 icon="person-outline"
@@ -250,7 +241,26 @@ export default function Profile() {
       </Panel>
 
       <Danger>
-        <Button title="Sair da conta" icon="log-out-outline" tone="red" onPress={signOut} />
+        {confirmingExit ? (
+          <>
+            <DangerText>
+              Quem sai do visitante não consegue voltar para ele depois: as estrelas ficam só no ranking. Para
+              guardar o progresso, toque em "Guardar meu progresso".
+            </DangerText>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Button title="Cancelar" tone="white" size="sm" onPress={() => setConfirmingExit(false)} />
+              <Button title="Sair mesmo assim" icon="log-out-outline" tone="red" size="sm" onPress={signOut} />
+            </View>
+          </>
+        ) : (
+          <Button
+            title="Sair da conta"
+            icon="log-out-outline"
+            tone="red"
+            // o visitante não tem como entrar de novo, então ele confirma antes de sair
+            onPress={user.guest ? () => setConfirmingExit(true) : signOut}
+          />
+        )}
         {confirmingReset ? (
           <>
             <DangerText>

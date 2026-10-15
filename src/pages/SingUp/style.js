@@ -8,20 +8,6 @@ export const Label = styled.Text`
   color: ${colors.ink};
 `;
 
-export const AvatarGrid = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-`;
-
-export const AvatarRing = styled.View`
-  padding: 3px;
-  border-radius: 32px;
-  border-width: 3px;
-  border-color: ${({ $selected }) => ($selected ? colors.purple : "transparent")};
-`;
-
 export const Note = styled.Text`
   padding: 10px 14px;
   border-radius: 14px;

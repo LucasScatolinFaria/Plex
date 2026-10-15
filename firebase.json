@@ -22,10 +22,12 @@
   "firestore": {
     "database": "(default)",
     "location": "southamerica-east1",
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "auth": {
     "providers": {
+      "anonymous": true,
       "emailPassword": true
     }
   }

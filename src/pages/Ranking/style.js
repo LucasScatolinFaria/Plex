@@ -67,7 +67,7 @@ export const Row = styled.View`
 `;
 
 export const Position = styled.Text`
-  width: 30px;
+  min-width: 30px;
   font-family: ${fonts.title};
   font-size: 20px;
   text-align: center;

@@ -1,28 +1,31 @@
 import { createContext, useEffect, useState } from "react";
 import {
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
   deleteUser,
+  linkWithCredential,
+  signInAnonymously,
   signInWithEmailAndPassword,
   signOut as signOutOfFirebase,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { disableNetwork, doc, enableNetwork, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 
 import { AVATARS, GUEST_AVATAR } from "../data/avatars";
 import { auth, db } from "../services/firebase";
-import { loadJSON, removeKey, saveJSON } from "../services/storage";
+import { loadJSON, saveJSON } from "../services/storage";
 
 export const AuthContext = createContext({});
 
-// As contas ficam no Firebase: o Authentication cuida do e-mail e da senha, e o Firestore guarda o perfil
-// de cada jogador em users/{uid}. O visitante continua existindo só neste aparelho.
-const GUEST = { id: "guest", name: "Visitante", email: null, avatar: GUEST_AVATAR.id, guest: true };
-
+// As contas ficam no Firebase: o Authentication cuida do login e o Firestore guarda o perfil de cada
+// jogador em users/{uid}. O visitante também entra no Firebase, como conta anônima (sem e-mail e presa
+// a este aparelho), com nome e avatar para aparecer no ranking dos visitantes.
 const AUTH_ERRORS = {
   "auth/invalid-credential": "E-mail ou senha incorretos.",
   "auth/wrong-password": "E-mail ou senha incorretos.",
   "auth/user-not-found": "E-mail ou senha incorretos.",
   "auth/invalid-email": "Digite um e-mail válido.",
   "auth/email-already-in-use": "Já existe uma conta com esse e-mail.",
+  "auth/credential-already-in-use": "Já existe uma conta com esse e-mail.",
   "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
   "auth/user-disabled": "Esta conta foi desativada.",
   "auth/too-many-requests": "Muitas tentativas seguidas. Espere um pouquinho e tente de novo.",
@@ -33,11 +36,12 @@ const normalizeEmail = (email) => email.trim().toLowerCase();
 
 const profileRef = (uid) => doc(db, "users", uid);
 
-const profileData = (account, { name, avatar }) => ({
+const toUser = (account, { name, avatar }) => ({
+  id: account.uid,
   name,
   email: account.email,
   avatar,
-  createdAt: serverTimestamp(),
+  guest: account.isAnonymous,
 });
 
 // troca os códigos de erro do Firebase por mensagens que dá para mostrar na tela
@@ -49,7 +53,17 @@ async function withAuthErrors(request) {
   }
 }
 
-// Cópia dos perfis que já entraram neste aparelho: alimenta o ranking e deixa o app abrir sem internet.
+// cria o perfil em users/{uid} ou atualiza o que já existe (o visitante que vira conta já tem um)
+async function writeProfile(account, { name, avatar }) {
+  const ref = profileRef(account.uid);
+  if ((await getDoc(ref)).exists()) {
+    await updateDoc(ref, { name, email: account.email, avatar });
+  } else {
+    await setDoc(ref, { name, email: account.email, avatar, createdAt: serverTimestamp() });
+  }
+}
+
+// Cópia dos perfis que já entraram neste aparelho, para o app abrir mesmo sem internet.
 async function rememberProfile({ id, name, avatar }) {
   const profiles = await loadJSON("profiles", {});
   await saveJSON("profiles", { ...profiles, [id]: { id, name, avatar } });
@@ -59,14 +73,18 @@ async function rememberProfile({ id, name, avatar }) {
 // perfil (ex.: foi criada direto no console do Firebase), nasce um perfil básico.
 async function loadProfile(account) {
   const saved = (await loadJSON("profiles", {}))[account.uid];
-  let profile = saved || { name: account.email.split("@")[0].slice(0, 30), avatar: AVATARS[0].id };
+  let profile =
+    saved ||
+    (account.isAnonymous
+      ? { name: "Visitante", avatar: GUEST_AVATAR.id }
+      : { name: account.email.split("@")[0].slice(0, 30), avatar: AVATARS[0].id });
   try {
     const snapshot = await getDoc(profileRef(account.uid));
     if (snapshot.exists()) profile = snapshot.data();
-    else await setDoc(profileRef(account.uid), profileData(account, profile));
+    else await writeProfile(account, profile);
   } catch (error) {}
 
-  const user = { id: account.uid, name: profile.name, email: account.email, avatar: profile.avatar };
+  const user = toUser(account, profile);
   await rememberProfile(user);
   return user;
 }
@@ -74,18 +92,12 @@ async function loadProfile(account) {
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // true quando o visitante pediu para criar uma conta e levar o progresso junto
-  const [guestUpgrade, setGuestUpgrade] = useState(false);
 
   useEffect(() => {
     async function restoreSession() {
-      if ((await loadJSON("session")) === GUEST.id) {
-        setUser(GUEST);
-      } else {
-        // o Firebase lembra quem estava conectado neste aparelho
-        await auth.authStateReady();
-        if (auth.currentUser) setUser(await loadProfile(auth.currentUser));
-      }
+      // o Firebase lembra quem estava conectado neste aparelho (conta ou visitante)
+      await auth.authStateReady();
+      if (auth.currentUser) setUser(await loadProfile(auth.currentUser));
       setLoading(false);
     }
     restoreSession();
@@ -95,51 +107,51 @@ function AuthProvider({ children }) {
     const { user: account } = await withAuthErrors(
       signInWithEmailAndPassword(auth, normalizeEmail(email), password)
     );
-    setGuestUpgrade(false);
     setUser(await loadProfile(account));
   }
 
+  // Quem está jogando como visitante e cria a conta continua com o mesmo id: o e-mail e a senha são
+  // ligados à conta anônima, e o progresso e a linha do ranking vão junto.
   async function signUp({ name, email, password, avatar }) {
+    const visitor = auth.currentUser?.isAnonymous ? auth.currentUser : null;
     const { user: account } = await withAuthErrors(
-      createUserWithEmailAndPassword(auth, normalizeEmail(email), password)
+      visitor
+        ? linkWithCredential(visitor, EmailAuthProvider.credential(normalizeEmail(email), password))
+        : createUserWithEmailAndPassword(auth, normalizeEmail(email), password)
     );
-    const profile = { id: account.uid, name: name.trim(), email: account.email, avatar };
 
+    if (visitor) {
+      // as conexões abertas do Firestore ainda usam o token de visitante (sem e-mail):
+      // reconecta para as regras já enxergarem a conta nova
+      await account.getIdToken(true);
+      await disableNetwork(db);
+      await enableNetwork(db);
+    }
+
+    const profile = toUser(account, { name: name.trim(), avatar });
     try {
-      await setDoc(profileRef(account.uid), profileData(account, profile));
+      await writeProfile(account, profile);
     } catch (error) {
-      // conta sem perfil fica pela metade: desfaz para dar para tentar de novo com o mesmo e-mail
-      await deleteUser(account).catch(() => signOutOfFirebase(auth));
+      // conta nova sem perfil fica pela metade: desfaz para dar para tentar de novo com o mesmo e-mail
+      if (!visitor) await deleteUser(account).catch(() => signOutOfFirebase(auth));
       throw new Error("Não foi possível salvar a conta agora. Tente de novo.");
     }
 
-    if (guestUpgrade) {
-      const guestProgress = await loadJSON(`progress:${GUEST.id}`);
-      if (guestProgress) {
-        await saveJSON(`progress:${account.uid}`, guestProgress);
-        await removeKey(`progress:${GUEST.id}`);
-      }
-    }
-
     await rememberProfile(profile);
-    setGuestUpgrade(false);
     setUser(profile);
   }
 
-  async function signInAsGuest() {
-    await saveJSON("session", GUEST.id);
-    setUser(GUEST);
+  async function signInAsGuest({ name, avatar }) {
+    const { user: account } = await withAuthErrors(signInAnonymously(auth));
+    const profile = toUser(account, { name: name.trim(), avatar });
+    await withAuthErrors(writeProfile(account, profile));
+    await rememberProfile(profile);
+    setUser(profile);
   }
 
   async function signOut() {
-    await removeKey("session");
     await signOutOfFirebase(auth);
     setUser(null);
-  }
-
-  async function upgradeGuest() {
-    setGuestUpgrade(true);
-    await signOut();
   }
 
   async function updateProfile(changes) {
@@ -157,12 +169,10 @@ function AuthProvider({ children }) {
         signed: !!user,
         user,
         loading,
-        guestUpgrade,
         signIn,
         signUp,
         signInAsGuest,
         signOut,
-        upgradeGuest,
         updateProfile,
       }}
     >

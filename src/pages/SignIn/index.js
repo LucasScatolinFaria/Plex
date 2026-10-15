@@ -36,7 +36,7 @@ export default function SignIn() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { isWide } = useLayout();
-  const { signIn, signInAsGuest } = useContext(AuthContext);
+  const { signIn } = useContext(AuthContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -131,7 +131,7 @@ export default function SignIn() {
                     icon="game-controller"
                     tone="purple"
                     full
-                    onPress={signInAsGuest}
+                    onPress={() => navigation.navigate("Guest")}
                   />
 
                   <Link onPress={() => navigation.navigate("SignUp")}>

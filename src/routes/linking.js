@@ -8,6 +8,7 @@ export const linking = {
     screens: {
       SignIn: "entrar",
       SignUp: "criar-conta",
+      Guest: "visitante",
       Tabs: {
         screens: {
           Home: "",

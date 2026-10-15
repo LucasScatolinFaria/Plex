@@ -4,9 +4,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Appear from "../../components/Appear";
-import Avatar from "../../components/Avatar";
+import AvatarPicker from "../../components/AvatarPicker";
 import Background from "../../components/Background";
-import Bouncy from "../../components/Bouncy";
 import Button from "../../components/Button";
 import Field from "../../components/Field";
 import Logo from "../../components/Logo";
@@ -16,19 +15,23 @@ import useShake from "../../hooks/useShake";
 import { fx } from "../../services/feedback";
 import { shadow } from "../../theme";
 import { Card, CardHint, CardTitle, Container, ErrorText, Link, LinkStrong, LinkText } from "../SignIn/style";
-import { AvatarGrid, AvatarRing, Label, Note } from "./style";
+import { Label, Note } from "./style";
 
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUp() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { signUp, guestUpgrade } = useContext(AuthContext);
+  const { user, signUp } = useContext(AuthContext);
+  // o visitante que cria a conta (pelo "Guardar meu progresso") leva o progresso junto
+  const upgrading = !!user?.guest;
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(upgrading ? user.name : "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [avatar, setAvatar] = useState(AVATARS[0].id);
+  const [avatar, setAvatar] = useState(
+    upgrading && AVATARS.some((item) => item.id === user.avatar) ? user.avatar : AVATARS[0].id
+  );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [shakeStyle, shake] = useShake();
@@ -84,27 +87,12 @@ export default function SignUp() {
                 <CardTitle>Criar conta 🚀</CardTitle>
                 <CardHint>É rapidinho: escolha um avatar e comece a jogar.</CardHint>
 
-                {guestUpgrade ? (
+                {upgrading ? (
                   <Note $highlight>✨ Seu progresso de visitante vai junto com a conta nova!</Note>
                 ) : null}
 
                 <Label>Escolha o seu avatar</Label>
-                <AvatarGrid accessibilityRole="radiogroup">
-                  {AVATARS.map((item) => (
-                    <Bouncy
-                      key={item.id}
-                      onPress={() => setAvatar(item.id)}
-                      sound="pop"
-                      accessibilityRole="radio"
-                      accessibilityLabel={`Avatar ${item.id}`}
-                      accessibilityState={{ selected: avatar === item.id }}
-                    >
-                      <AvatarRing $selected={avatar === item.id}>
-                        <Avatar id={item.id} size={46} ring={false} />
-                      </AvatarRing>
-                    </Bouncy>
-                  ))}
-                </AvatarGrid>
+                <AvatarPicker avatars={AVATARS} value={avatar} onChange={setAvatar} />
 
                 <Field
                   icon="person-outline"
@@ -143,11 +131,19 @@ export default function SignUp() {
 
                 <Note>🔒 Sua conta fica guardada com segurança na nuvem.</Note>
 
-                <Link onPress={goToSignIn}>
-                  <LinkText>
-                    Já tem uma conta? <LinkStrong>Entrar</LinkStrong>
-                  </LinkText>
-                </Link>
+                {upgrading ? (
+                  <Link onPress={() => navigation.goBack()}>
+                    <LinkText>
+                      <LinkStrong>Agora não</LinkStrong>
+                    </LinkText>
+                  </Link>
+                ) : (
+                  <Link onPress={goToSignIn}>
+                    <LinkText>
+                      Já tem uma conta? <LinkStrong>Entrar</LinkStrong>
+                    </LinkText>
+                  </Link>
+                )}
               </Card>
             </Animated.View>
           </Appear>
