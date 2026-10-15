@@ -1,9 +1,15 @@
 import { useEffect, useRef } from "react";
-import { Animated, View } from "react-native";
+import { Animated, Platform, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import useLoop from "../../hooks/useLoop";
+import Float from "../Float";
+import useMotion from "../../hooks/useMotion";
 import { glow, nativeDriver } from "../../theme";
+import { followPointer, hasMouse } from "../../utils/pointer";
+
+// no navegador os olhos deslizam até o ponto novo em vez de pular
+const GAZE_EASE =
+  Platform.OS === "web" ? { transitionProperty: "transform", transitionDuration: "220ms", transitionTimingFunction: "ease-out" } : null;
 
 const SCREEN = "#1E1B4B";
 const LIGHT = "#5EEAD4";
@@ -57,10 +63,31 @@ function Mouth({ mood, unit }) {
 // Bip, o robozinho do SESI Kids. mood = "happy" | "excited" | "sad" | "thinking" | "wink"
 export default function Mascot({ size = 120, mood = "happy", style }) {
   const unit = size;
-  const bob = useLoop(1500);
-  const bulb = useLoop(800);
+  const motion = useMotion();
   const blink = useRef(new Animated.Value(1)).current;
   const reaction = useRef(new Animated.Value(0)).current;
+  const gaze = useRef(null);
+
+  // no computador o Bip acompanha o mouse com os olhos
+  useEffect(() => {
+    if (!motion || !hasMouse()) return undefined;
+    const stop = followPointer(({ x, y }) => {
+      const node = gaze.current;
+      const box = node?.getBoundingClientRect?.();
+      if (!box?.width) return;
+      const dx = x - (box.left + box.width / 2);
+      const dy = y - (box.top + box.height / 2);
+      const distance = Math.hypot(dx, dy) || 1;
+      const reach = Math.min(1, distance / 260);
+      node.style.transform = `translate(${(dx / distance) * reach * unit * 0.06}px, ${
+        (dy / distance) * reach * unit * 0.04
+      }px)`;
+    });
+    return () => {
+      stop();
+      if (gaze.current?.style) gaze.current.style.transform = "";
+    };
+  }, [motion, unit]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -83,7 +110,6 @@ export default function Mascot({ size = 120, mood = "happy", style }) {
     return () => animation.stop();
   }, [mood, reaction]);
 
-  const float = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -unit * 0.05] });
   const jump = reaction.interpolate({
     inputRange: [0, 0.25, 0.5, 0.75, 1],
     outputRange: mood === "excited" ? [0, -unit * 0.18, 0, -unit * 0.1, 0] : [0, 0, 0, 0, 0],
@@ -95,97 +121,97 @@ export default function Mascot({ size = 120, mood = "happy", style }) {
         ? ["0deg", "-9deg", "8deg", "-6deg", "4deg", "0deg"]
         : ["0deg", "0deg", "0deg", "0deg", "0deg", "0deg"],
   });
-  const bulbScale = bulb.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.15] });
 
   const eye = unit * 0.11;
   const closedEyes = mood === "excited";
   const lookUp = mood === "thinking" ? -unit * 0.03 : 0;
 
   return (
-    <Animated.View
-      style={[
-        { width: unit * 1.2, alignItems: "center" },
-        style,
-        { transform: [{ translateY: Animated.add(float, jump) }, { rotate: tilt }] },
-      ]}
-    >
-      {/* antena */}
+    <Float kind="float" duration={1500} style={[{ width: unit * 1.2, alignItems: "center" }, style]}>
       <Animated.View
-        style={[
-          {
-            width: unit * 0.13,
-            height: unit * 0.13,
-            borderRadius: unit,
-            backgroundColor: mood === "sad" ? "#94A3B8" : "#FFD23F",
-            transform: [{ scale: bulbScale }],
-          },
-          mood === "sad" ? null : glow("rgba(255,210,63,0.9)", unit * 0.14),
-        ]}
-      />
-      <View style={{ width: unit * 0.045, height: unit * 0.09, backgroundColor: "#C7D2FE" }} />
-
-      {/* cabeça */}
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Ear unit={unit} side="left" />
-        <LinearGradient
-          colors={["#FFFFFF", "#D9E4FF"]}
-          style={{
-            width: unit,
-            height: unit * 0.76,
-            borderRadius: unit * 0.26,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        style={{ width: unit * 1.2, alignItems: "center", transform: [{ translateY: jump }, { rotate: tilt }] }}
+      >
+        {/* antena */}
+        <Float kind="beat" duration={800}>
           <View
+            style={[
+              {
+                width: unit * 0.13,
+                height: unit * 0.13,
+                borderRadius: unit,
+                backgroundColor: mood === "sad" ? "#94A3B8" : "#FFD23F",
+              },
+              mood === "sad" ? null : glow("rgba(255,210,63,0.9)", unit * 0.14),
+            ]}
+          />
+        </Float>
+        <View style={{ width: unit * 0.045, height: unit * 0.09, backgroundColor: "#C7D2FE" }} />
+
+        {/* cabeça */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Ear unit={unit} side="left" />
+          <LinearGradient
+            colors={["#FFFFFF", "#D9E4FF"]}
             style={{
-              width: unit * 0.78,
-              height: unit * 0.52,
-              borderRadius: unit * 0.18,
-              backgroundColor: SCREEN,
+              width: unit,
+              height: unit * 0.76,
+              borderRadius: unit * 0.26,
               alignItems: "center",
               justifyContent: "center",
-              gap: unit * 0.05,
             }}
           >
             <View
               style={{
-                flexDirection: "row",
+                width: unit * 0.78,
+                height: unit * 0.52,
+                borderRadius: unit * 0.18,
+                backgroundColor: SCREEN,
                 alignItems: "center",
-                gap: unit * 0.2,
-                height: eye * 1.3,
-                transform: [{ translateY: lookUp }],
+                justifyContent: "center",
+                gap: unit * 0.05,
               }}
             >
-              <Eye size={eye} closed={closedEyes || mood === "wink"} blink={blink} />
-              <Eye size={eye} closed={closedEyes} blink={blink} />
+              <View ref={gaze} style={GAZE_EASE}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: unit * 0.2,
+                    height: eye * 1.3,
+                    transform: [{ translateY: lookUp }],
+                  }}
+                >
+                  <Eye size={eye} closed={closedEyes || mood === "wink"} blink={blink} />
+                  <Eye size={eye} closed={closedEyes} blink={blink} />
+                </View>
+              </View>
+              <View style={{ height: unit * 0.12, justifyContent: "center" }}>
+                <Mouth mood={mood} unit={unit} />
+              </View>
+              <Cheek unit={unit} side="left" />
+              <Cheek unit={unit} side="right" />
             </View>
-            <View style={{ height: unit * 0.12, justifyContent: "center" }}>
-              <Mouth mood={mood} unit={unit} />
-            </View>
-            <Cheek unit={unit} side="left" />
-            <Cheek unit={unit} side="right" />
-          </View>
-        </LinearGradient>
-        <Ear unit={unit} side="right" />
-      </View>
+          </LinearGradient>
+          <Ear unit={unit} side="right" />
+        </View>
 
-      {/* corpo */}
-      <LinearGradient
-        colors={["#A78BFA", "#7C3AED"]}
-        style={{
-          width: unit * 0.52,
-          height: unit * 0.2,
-          marginTop: -unit * 0.02,
-          borderBottomLeftRadius: unit * 0.12,
-          borderBottomRightRadius: unit * 0.12,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <View style={{ width: unit * 0.09, height: unit * 0.09, borderRadius: unit, backgroundColor: "#FFD23F" }} />
-      </LinearGradient>
-    </Animated.View>
+        {/* corpo */}
+        <LinearGradient
+          colors={["#A78BFA", "#7C3AED"]}
+          style={{
+            width: unit * 0.52,
+            height: unit * 0.2,
+            marginTop: -unit * 0.02,
+            borderBottomLeftRadius: unit * 0.12,
+            borderBottomRightRadius: unit * 0.12,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <View style={{ width: unit * 0.09, height: unit * 0.09, borderRadius: unit, backgroundColor: "#FFD23F" }} />
+        </LinearGradient>
+      </Animated.View>
+    </Float>
   );
 }
 

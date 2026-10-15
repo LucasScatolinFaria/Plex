@@ -1,7 +1,7 @@
-import { Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import styled from "styled-components/native";
 
+import Float from "../../components/Float";
 import { colors, fonts } from "../../theme";
 
 export const HeaderRow = styled.View`
@@ -188,7 +188,7 @@ export const CardGlow = styled.View`
 `;
 
 // selo dos jogos que a criança ainda não experimentou
-export const NewBadge = styled(Animated.View)`
+export const NewBadge = styled(Float)`
   position: absolute;
   top: 12px;
   right: 12px;

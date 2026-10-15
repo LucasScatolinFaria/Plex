@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>SESI Kids · Aprender brincando</title>
+
+    <!-- Bip, o robozinho, é o ícone da aba. Os nomes dos arquivos são novos de propósito:
+         assim o navegador não reaproveita um ícone antigo guardado no cache. -->
+    <link rel="icon" href="/icons/bip.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/bip-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/icons/bip-apple-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="SESI Kids" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+        margin: 0;
+        background: #1b0e52 linear-gradient(#1b0e52, #3a1c9c, #6d28d9);
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+
+    <!-- Tela de espera enquanto o jogo baixa (o React troca tudo isto pelo app quando termina). -->
+    <style>
+      .boot {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+      }
+      .boot img {
+        width: 104px;
+        height: 104px;
+        border-radius: 26px;
+        box-shadow: 0 14px 34px rgba(10, 3, 40, 0.5);
+        animation: boot-float 1.8s ease-in-out infinite alternate;
+      }
+      .boot-dots {
+        display: flex;
+        gap: 8px;
+      }
+      .boot-dots span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ffd23f;
+        animation: boot-dot 1s ease-in-out infinite;
+      }
+      .boot-dots span:nth-child(2) {
+        background: #ff5fa2;
+        animation-delay: 0.15s;
+      }
+      .boot-dots span:nth-child(3) {
+        background: #22d3ee;
+        animation-delay: 0.3s;
+      }
+      @keyframes boot-float {
+        from {
+          transform: translateY(4px) rotate(-3deg);
+        }
+        to {
+          transform: translateY(-8px) rotate(3deg);
+        }
+      }
+      @keyframes boot-dot {
+        0%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.5;
+        }
+        40% {
+          transform: translateY(-9px);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      Para jogar o SESI Kids, ative o JavaScript do seu navegador.
+    </noscript>
+    <div id="root">
+      <div class="boot" role="status" aria-label="Carregando o SESI Kids">
+        <img src="/icons/bip.svg" alt="" />
+        <div class="boot-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  </body>
+</html>

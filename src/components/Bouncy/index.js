@@ -5,9 +5,11 @@ import { fx } from "../../services/feedback";
 import { nativeDriver } from "../../theme";
 
 // Área tocável que afunda no toque e cresce um pouco quando o mouse passa por cima.
+// onHoverChange(true/false) avisa quando o mouse entra e sai (para efeitos extras de quem usa).
 export default function Bouncy({
   children,
   onPress,
+  onHoverChange,
   style,
   contentStyle,
   disabled = false,
@@ -33,8 +35,14 @@ export default function Bouncy({
       onPress={handlePress}
       onPressIn={() => animateTo(pressedScale)}
       onPressOut={() => animateTo(1)}
-      onHoverIn={() => animateTo(hoverScale)}
-      onHoverOut={() => animateTo(1)}
+      onHoverIn={() => {
+        animateTo(hoverScale);
+        if (onHoverChange) onHoverChange(true);
+      }}
+      onHoverOut={() => {
+        animateTo(1);
+        if (onHoverChange) onHoverChange(false);
+      }}
       style={[{ userSelect: "none" }, style]}
       {...rest}
     >

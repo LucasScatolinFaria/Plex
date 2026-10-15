@@ -1,7 +1,10 @@
-import { Animated } from "react-native";
+import { Animated, Platform } from "react-native";
 import styled from "styled-components/native";
 
 import { colors, fonts } from "../../theme";
+
+// transições de CSS só existem no navegador
+const webOnly = (css) => (Platform.OS === "web" ? css : "");
 
 export const BottomWrap = styled.View`
   position: absolute;
@@ -38,6 +41,7 @@ export const ItemLabel = styled.Text`
   font-family: ${fonts.heading};
   font-size: ${({ $top }) => ($top ? 16 : 12)}px;
   color: ${({ $focused, $top }) => ($focused ? ($top ? "#4a2500" : colors.yellow) : colors.lilac)};
+  ${webOnly("transition-property: color; transition-duration: 250ms;")}
 `;
 
 export const TopBar = styled.View`
@@ -51,10 +55,25 @@ export const TopBar = styled.View`
   border-bottom-color: rgba(255, 255, 255, 0.12);
 `;
 
+export const Brand = styled.View`
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+`;
+
 export const TopItems = styled.View`
   flex-direction: row;
   align-items: center;
   gap: 6px;
+`;
+
+// pílula amarela que desliza até a aba escolhida (left e width são animados)
+export const TopPill = styled(Animated.View)`
+  position: absolute;
+  top: 0;
+  height: 42px;
+  border-radius: 21px;
+  background-color: ${colors.yellow};
 `;
 
 export const TopItem = styled.View`
@@ -64,7 +83,8 @@ export const TopItem = styled.View`
   height: 42px;
   padding: 0 18px;
   border-radius: 21px;
-  background-color: ${({ $focused }) => ($focused ? colors.yellow : "transparent")};
+  background-color: ${({ $hovered }) => ($hovered ? "rgba(255, 255, 255, 0.12)" : "transparent")};
+  ${webOnly("transition-property: background-color; transition-duration: 200ms;")}
 `;
 
 export const UserChip = styled.View`

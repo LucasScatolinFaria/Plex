@@ -22,6 +22,23 @@ export const linking = {
   },
 };
 
+// Emoji que aparece antes do nome da tela na aba do navegador (ex.: "🏅 Ranking · SESI Kids").
+// Vai pelo título da tela: quando a tela acabou de abrir, o react-navigation às vezes ainda não sabe a rota.
+const TITLE_EMOJI = {
+  Jogos: "🎮",
+  Conquistas: "🏆",
+  Ranking: "🏅",
+  Perfil: "😊",
+  Entrar: "👋",
+  "Criar conta": "🚀",
+  Visitante: "👽",
+  ...Object.fromEntries(GAMES.map((game) => [game.title, game.emoji])),
+};
+
 export const documentTitle = {
-  formatter: (options, route) => `${options?.title ?? route?.name ?? "Início"} · SESI Kids`,
+  formatter: (options, route) => {
+    const title = options?.title ?? route?.name;
+    if (!title) return "SESI Kids · Aprender brincando";
+    return `${TITLE_EMOJI[title] ?? "✨"} ${title} · SESI Kids`;
+  },
 };
