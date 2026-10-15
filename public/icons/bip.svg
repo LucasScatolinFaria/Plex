@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Bip, o robozinho do SESI Kids: ícone da aba do navegador -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#241062"/>
+      <stop offset="0.55" stop-color="#4C1FB8"/>
+      <stop offset="1" stop-color="#8B3DF0"/>
+    </linearGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D9E0FF"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#FFE27A" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FFE27A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="16" fill="url(#sky)"/>
+  <circle cx="11" cy="12" r="1.3" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="54" cy="9" r="1" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="57" cy="44" r="1.1" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="6.5" cy="47" r="0.9" fill="#FFFFFF" opacity="0.6"/>
+
+  <rect x="30.5" y="10" width="3" height="9" rx="1.5" fill="#C7D2FE"/>
+  <circle cx="32" cy="9" r="7.5" fill="url(#glow)"/>
+  <circle cx="32" cy="9" r="4.2" fill="#FFD23F"/>
+
+  <rect x="22" y="47" width="20" height="11" rx="5" fill="url(#body)"/>
+  <circle cx="32" cy="54" r="2.2" fill="#FFD23F"/>
+
+  <rect x="7.5" y="28" width="6" height="13" rx="3" fill="#8B5CF6"/>
+  <rect x="50.5" y="28" width="6" height="13" rx="3" fill="#8B5CF6"/>
+  <rect x="10.5" y="17.5" width="43" height="33" rx="13" fill="url(#head)"/>
+  <rect x="15.5" y="22.5" width="33" height="23" rx="9" fill="#1F1D47"/>
+
+  <rect x="22.5" y="27.5" width="5.2" height="7.4" rx="2.6" fill="#5EEAD4"/>
+  <rect x="36.3" y="27.5" width="5.2" height="7.4" rx="2.6" fill="#5EEAD4"/>
+  <path d="M27 37.2a5 5 0 0 0 10 0" fill="none" stroke="#5EEAD4" stroke-width="2.6" stroke-linecap="round"/>
+  <ellipse cx="20.3" cy="38.6" rx="2.4" ry="1.4" fill="#F28DB2" opacity="0.9"/>
+  <ellipse cx="43.7" cy="38.6" rx="2.4" ry="1.4" fill="#F28DB2" opacity="0.9"/>
+</svg>

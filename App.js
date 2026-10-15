@@ -2,6 +2,7 @@
 import { Platform, StatusBar, View } from "react-native";
 
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { Asset } from "expo-asset";
 import { useFonts } from "expo-font";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Fredoka_500Medium } from "@expo-google-fonts/fredoka/500Medium";
@@ -23,16 +24,28 @@ const theme = {
   colors: { ...DefaultTheme.colors, background: colors.space },
 };
 
+const FONTS = {
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+  ...Ionicons.font,
+};
+
+// No site publicado as fontes são pedidas com "?v=2" no endereço. O primeiro deploy (15/10/2026) saiu sem
+// elas, e quem abriu o site naquela hora ficou com uma página guardada no lugar das fontes (cache de um ano).
+// Com o endereço novo esses navegadores baixam as fontes certas.
+const fontSources =
+  Platform.OS === "web" && !__DEV__
+    ? Object.fromEntries(
+        Object.entries(FONTS).map(([name, file]) => [name, `${Asset.fromModule(file).uri}?v=2`])
+      )
+    : FONTS;
+
 export default function App() {
-  const [fontsLoaded, fontError] = useFonts({
-    Fredoka_500Medium,
-    Fredoka_600SemiBold,
-    Fredoka_700Bold,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
-    ...Ionicons.font,
-  });
+  const [fontsLoaded, fontError] = useFonts(fontSources);
 
   // se as fontes falharem o app abre mesmo assim, com a fonte padrão do aparelho
   if (!fontsLoaded && !fontError) {

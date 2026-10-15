@@ -1,0 +1,79 @@
+rules_version = '2';
+
+// Banco de dados do SESI Kids (Cloud Firestore).
+// A senha nunca passa por aqui: quem cuida do login é o Firebase Authentication. O visitante também
+// entra no Authentication, como conta anônima (sem e-mail).
+//   users/{uid}     perfil: nome, e-mail (vazio no visitante), avatar. Só o dono lê e altera.
+//   progress/{uid}  progresso dos jogos: estrelas, recordes, conquistas. Só o dono lê e altera.
+//   ranking/{uid}   o que aparece no ranking: nome, avatar, estrelas e XP. Visitante só vê visitantes
+//                   e quem tem conta só vê quem tem conta.
+// Todo o resto do banco fica fechado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && validProfile()
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId) && validProfile()
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    match /progress/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validProgress();
+    }
+
+    match /ranking/{userId} {
+      allow read: if request.auth != null && resource.data.guest == isGuest();
+      allow create, update: if isOwner(userId) && validRanking();
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // visitante = conta anônima, a única sem e-mail
+    function isGuest() {
+      return request.auth.token.get("email", null) == null;
+    }
+
+    function validName(name) {
+      return name is string && name.size() > 0 && name.size() <= 60;
+    }
+
+    function validAvatar(avatar) {
+      return avatar is string && avatar.size() <= 30;
+    }
+
+    function validProfile() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["name", "email", "avatar", "createdAt"])
+        && data.keys().hasAll(["name", "email", "avatar", "createdAt"])
+        && validName(data.name)
+        && data.email == request.auth.token.get("email", null)
+        && validAvatar(data.avatar);
+    }
+
+    function validProgress() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["xp", "plays", "records", "byGame", "achievements", "streak", "updatedAt"])
+        && data.xp is int && data.xp >= 0
+        && data.plays is int && data.plays >= 0
+        && data.byGame is map && data.achievements is map && data.streak is map
+        && data.updatedAt == request.time;
+    }
+
+    function validRanking() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["name", "avatar", "guest", "stars", "xp", "updatedAt"])
+        && data.keys().hasAll(["name", "avatar", "guest", "stars", "xp", "updatedAt"])
+        && validName(data.name)
+        && validAvatar(data.avatar)
+        && data.guest == isGuest()
+        // limite folgado só para barrar números absurdos (hoje o máximo é 153 estrelas, em 16 jogos)
+        && data.stars is int && data.stars >= 0 && data.stars <= 1000
+        && data.xp is int && data.xp >= 0
+        && data.updatedAt == request.time;
+    }
+  }
+}
