@@ -86,6 +86,20 @@ export const ACHIEVEMENTS = [
       last.gameId === "velha" && last.modeId === "dificil" && last.detail.losses === 0,
   },
   {
+    id: "xeque-mate",
+    emoji: "♟️",
+    title: "Xeque-Mate!",
+    description: "Vença o Bip no Xadrez.",
+    check: (progress, last) => last.gameId === "xadrez" && last.detail.result === "win",
+  },
+  {
+    id: "grande-mestre",
+    emoji: "👑",
+    title: "Grande Mestre",
+    description: "Vença o Bip Difícil no Xadrez.",
+    check: (progress) => bestStars(progress, "xadrez", "dificil") === 3,
+  },
+  {
     id: "ouvido-bionico",
     emoji: "🎧",
     title: "Ouvido Biônico",
@@ -113,6 +127,13 @@ export const ACHIEVEMENTS = [
     title: "Pianista",
     description: "Toque uma música inteira no Piano Mágico sem errar nenhuma nota.",
     check: (progress, last) => last.gameId === "piano" && last.stars === 3 && last.detail.mistakes === 0,
+  },
+  {
+    id: "virtuoso",
+    emoji: "🎼",
+    title: "Virtuoso",
+    description: "Toque “Für Elise” inteira no Piano Mágico.",
+    check: (progress) => bestStars(progress, "piano", "elise") >= 1,
   },
   {
     id: "poliglota",
@@ -162,6 +183,20 @@ export const ACHIEVEMENTS = [
     title: "Imparável",
     description: "Jogue 7 dias seguidos.",
     check: (progress) => progress.streak.count >= 7,
+  },
+  {
+    id: "desafio-aceito",
+    emoji: "🎯",
+    title: "Desafio Aceito",
+    description: "Complete um desafio do dia.",
+    check: (progress) => (progress.daily?.total || 0) >= 1,
+  },
+  {
+    id: "desafiador",
+    emoji: "📅",
+    title: "Desafiador",
+    description: "Complete 7 desafios do dia.",
+    check: (progress) => (progress.daily?.total || 0) >= 7,
   },
   {
     id: "capitao-cometa",

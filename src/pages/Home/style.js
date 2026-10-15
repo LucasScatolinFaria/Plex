@@ -142,6 +142,85 @@ export const LevelXp = styled.Text`
   color: ${colors.textSoft};
 `;
 
+// cartão do desafio do dia
+export const DailyBox = styled(LinearGradient)`
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 26px;
+  overflow: hidden;
+`;
+
+export const DailyIcon = styled.View`
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.25);
+`;
+
+export const DailyEmoji = styled.Text`
+  font-size: 32px;
+  line-height: 40px;
+`;
+
+export const DailyBody = styled.View`
+  flex: 1;
+  gap: 4px;
+`;
+
+export const DailyLabel = styled.Text`
+  font-family: ${fonts.strong};
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.85);
+`;
+
+export const DailyText = styled.Text`
+  font-family: ${fonts.heading};
+  font-size: 17px;
+  line-height: 21px;
+  color: ${colors.white};
+`;
+
+export const DailyBar = styled.View`
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+`;
+
+export const DailyCount = styled.Text`
+  font-family: ${fonts.title};
+  font-size: 14px;
+  color: ${colors.white};
+`;
+
+export const DailyReward = styled.View`
+  align-items: center;
+  gap: 6px;
+`;
+
+export const DailyRewardText = styled.Text`
+  padding: 4px 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: ${fonts.title};
+  font-size: 15px;
+  color: #4a2500;
+  background-color: ${colors.yellow};
+`;
+
+export const DailyHint = styled.Text`
+  font-family: ${fonts.body};
+  font-size: 12px;
+  text-align: center;
+  color: ${colors.white};
+`;
+
 export const SectionTitle = styled.Text`
   margin-top: 26px;
   font-family: ${fonts.title};

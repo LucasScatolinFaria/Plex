@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -14,11 +14,12 @@ import Shine from "../../components/Shine";
 import TypeText from "../../components/TypeText";
 import { AuthContext } from "../../contexts/auth";
 import { ProgressContext } from "../../contexts/progress";
-import { CATEGORIES, GAMES, maxStars } from "../../data/games";
+import { DAILY_XP, dailyStatus } from "../../data/daily";
+import { CATEGORIES, GAMES, getGame, maxStars } from "../../data/games";
 import useLayout from "../../hooks/useLayout";
 import { colors, fonts, gradients, shadow } from "../../theme";
 import { firstName } from "../../utils/helpers";
-import { currentStreak, gameStars, levelInfo, playsOf, totalStars } from "../../utils/progress";
+import { currentStreak, dayKey, gameStars, levelInfo, playsOf, totalStars } from "../../utils/progress";
 import {
   Bubble,
   CardCategory,
@@ -29,6 +30,17 @@ import {
   CategoryChip,
   CategoryText,
   Chip,
+  DailyBar,
+  DailyBody,
+  DailyBox,
+  DailyCount,
+  DailyEmoji,
+  DailyHint,
+  DailyIcon,
+  DailyLabel,
+  DailyReward,
+  DailyRewardText,
+  DailyText,
   Footer,
   GameCardBox,
   Greeting,
@@ -73,6 +85,74 @@ function suggestGame(progress) {
   const ratio = (game) => gameStars(progress, game) / maxStars(game);
   const weakest = [...GAMES].sort((a, b) => ratio(a) - ratio(b))[0];
   return { game: weakest, text: `Que tal buscar mais estrelas em ${weakest.title}?` };
+}
+
+// quanto falta para a meia-noite, quando chega o desafio novo
+function untilMidnight(now) {
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  const minutes = Math.max(1, Math.ceil((midnight - now) / 60000));
+  const hours = Math.floor(minutes / 60);
+  return hours > 0 ? `${hours}h ${String(minutes % 60).padStart(2, "0")}min` : `${minutes} min`;
+}
+
+// Desafio do dia: o mesmo para todo mundo, muda à meia-noite e vale XP extra.
+function DailyCard({ progress, onPlay }) {
+  const [now, setNow] = useState(() => new Date());
+
+  // o relógio anda: atualiza a contagem e troca o desafio quando o dia vira
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const { challenge, value, done } = dailyStatus(progress, dayKey(now));
+  const game = challenge.gameId ? getGame(challenge.gameId) : null;
+
+  return (
+    <Appear delay={120}>
+      <Bouncy
+        onPress={() => onPlay(game)}
+        disabled={done}
+        pressedScale={0.98}
+        hoverScale={1.01}
+        accessibilityLabel={`Desafio do dia: ${challenge.text} ${done ? "Concluído." : `${value} de ${challenge.goal}.`}`}
+      >
+        <DailyBox
+          colors={done ? ["#34D399", "#0E9F6E"] : ["#FF9F43", "#FF5FA2"]}
+          {...DIAGONAL}
+          style={shadow(10, 24, "rgba(10,3,40,0.4)")}
+        >
+          {done ? null : <Shine every={4200} />}
+          <DailyIcon>
+            <Float kind="pulse" duration={900}>
+              <DailyEmoji>{done ? "✅" : challenge.emoji}</DailyEmoji>
+            </Float>
+          </DailyIcon>
+          <DailyBody>
+            <DailyLabel>🎯 DESAFIO DO DIA</DailyLabel>
+            <DailyText>{challenge.text}</DailyText>
+            <DailyBar>
+              <ProgressBar
+                value={value / challenge.goal}
+                height={10}
+                color={colors.white}
+                track="rgba(255,255,255,0.3)"
+                style={{ flex: 1 }}
+              />
+              <DailyCount>
+                {value}/{challenge.goal}
+              </DailyCount>
+            </DailyBar>
+          </DailyBody>
+          <DailyReward>
+            <DailyRewardText>{done ? "Feito!" : `+${DAILY_XP} XP`}</DailyRewardText>
+            <DailyHint>{done ? `Outro em\n${untilMidnight(now)}` : game ? "Jogar ▶" : "Bora! ▶"}</DailyHint>
+          </DailyReward>
+        </DailyBox>
+      </Bouncy>
+    </Appear>
+  );
 }
 
 // No computador, com o mouse em cima o cartão sobe, a sombra cresce, o emoji dá um pulinho e o
@@ -215,6 +295,8 @@ export default function Home() {
           </LevelCard>
         </Appear>
       </TopRow>
+
+      <DailyCard progress={progress} onPlay={(game) => navigation.navigate((game || featured.game).route)} />
 
       <SectionTitle accessibilityRole="header">Escolha um jogo</SectionTitle>
       <View style={{ marginHorizontal: -16 }}>

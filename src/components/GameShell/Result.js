@@ -8,6 +8,7 @@ import CountUp from "../CountUp";
 import Mascot from "../Mascot";
 import ProgressBar from "../ProgressBar";
 import StarRow from "../StarRow";
+import { DAILY_XP } from "../../data/daily";
 import { fx } from "../../services/feedback";
 import { colors, fonts, shadow } from "../../theme";
 import {
@@ -38,7 +39,7 @@ import {
 
 const HEADLINES = ["Quase lá!", "Boa!", "Muito bem!", "Incrível!"];
 
-// Tela de fim de partida: estrelas, pontos, XP e conquistas novas.
+// Tela de fim de partida: estrelas, pontos, XP, desafio do dia e conquistas novas.
 export default function Result({ game, outcome, onReplay, onChangeMode, onLeave }) {
   const { result, summary } = outcome;
   const stars = result.casual ? 0 : result.stars;
@@ -113,6 +114,18 @@ export default function Result({ game, outcome, onReplay, onChangeMode, onLeave 
               <ProgressBar value={xpRatio} height={12} color={colors.yellow} />
               {leveledUp ? <LevelUpText>Subiu de nível! Agora você é {summary.after.title}.</LevelUpText> : null}
             </XpBox>
+
+            {summary.daily ? (
+              <Appear delay={1000} from="scale" style={{ alignSelf: "stretch" }}>
+                <Unlocked>
+                  <UnlockedEmoji>🎯</UnlockedEmoji>
+                  <View style={{ flex: 1 }}>
+                    <UnlockedLabel>Desafio do dia concluído! +{DAILY_XP} XP</UnlockedLabel>
+                    <UnlockedTitle>{summary.daily.text}</UnlockedTitle>
+                  </View>
+                </Unlocked>
+              </Appear>
+            ) : null}
 
             {summary.unlocked.map((achievement, index) => (
               <Appear key={achievement.id} delay={1200 + index * 250} style={{ alignSelf: "stretch" }}>

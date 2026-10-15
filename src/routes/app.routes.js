@@ -12,6 +12,7 @@ import Profile from "../pages/Profile";
 import Ranking from "../pages/Ranking";
 import SignUp from "../pages/SingUp";
 import BugHunt from "../pages/games/BugHunt";
+import Chess from "../pages/games/Chess";
 import Clock from "../pages/games/Clock";
 import Compare from "../pages/games/Compare";
 import English from "../pages/games/English";
@@ -39,6 +40,7 @@ const GAME_SCREENS = {
   SecretWord,
   Quiz,
   TicTacToe,
+  Chess,
   Genius,
   BugHunt,
   SlidePuzzle,

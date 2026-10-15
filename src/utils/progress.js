@@ -7,6 +7,8 @@ export const EMPTY_PROGRESS = {
   byGame: {}, // { [gameId]: { plays, bests: { [modeId]: { score, stars } } } }
   achievements: {}, // { [achievementId]: data em que foi conquistada }
   streak: { count: 0, last: null },
+  // desafio do dia (data/daily.js): o de hoje e quantos já foram completados no total
+  daily: { day: null, value: 0, games: [], done: false, total: 0 },
 };
 
 const LEVEL_TITLES = [
@@ -83,5 +85,6 @@ export function normalizeProgress(saved) {
     ...EMPTY_PROGRESS,
     ...(saved || {}),
     streak: { ...EMPTY_PROGRESS.streak, ...(saved?.streak || {}) },
+    daily: { ...EMPTY_PROGRESS.daily, ...(saved?.daily || {}) },
   };
 }

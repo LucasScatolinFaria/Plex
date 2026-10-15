@@ -1,4 +1,5 @@
 import { ACHIEVEMENTS } from "../data/achievements";
+import { DAILY_XP, advanceDaily, dailyChallenge } from "../data/daily";
 import { clamp } from "./helpers";
 import { bestOf, dayKey, levelInfo, nextStreak } from "./progress";
 
@@ -38,6 +39,15 @@ export function applyResult(previous, gameId, modeId, result, today = dayKey()) 
   };
 
   const last = { gameId, modeId, stars, score, detail: result.detail || {} };
+
+  // desafio do dia: a partida conta para ele e, se completou agora, vale XP extra
+  const { daily, completed } = advanceDaily(previous.daily, last, today);
+  progress.daily = daily;
+  if (completed) {
+    progress.xp += DAILY_XP;
+    xpGained += DAILY_XP;
+  }
+
   const unlocked = ACHIEVEMENTS.filter(
     (achievement) => !previous.achievements[achievement.id] && achievement.check(progress, last)
   );
@@ -61,6 +71,7 @@ export function applyResult(previous, gameId, modeId, result, today = dayKey()) 
       before: levelInfo(previous.xp),
       after: levelInfo(progress.xp),
       unlocked,
+      daily: completed ? dailyChallenge(today) : null,
     },
   };
 }

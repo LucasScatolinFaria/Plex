@@ -56,10 +56,12 @@ service cloud.firestore {
 
     function validProgress() {
       let data = request.resource.data;
-      return data.keys().hasOnly(["xp", "plays", "records", "byGame", "achievements", "streak", "updatedAt"])
+      return data.keys().hasOnly(["xp", "plays", "records", "byGame", "achievements", "streak", "daily", "updatedAt"])
         && data.xp is int && data.xp >= 0
         && data.plays is int && data.plays >= 0
         && data.byGame is map && data.achievements is map && data.streak is map
+        // desafio do dia (data/daily.js); progressos antigos não têm esse campo
+        && data.get("daily", {}) is map
         && data.updatedAt == request.time;
     }
 

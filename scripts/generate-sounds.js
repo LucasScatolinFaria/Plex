@@ -1,5 +1,6 @@
 // Gera os efeitos sonoros do SESI Kids em assets/sounds (sem precisar baixar nada).
-// Uso: npm run sounds
+// Uso: npm run sounds            (tudo)
+//      npm run sounds -- piano   (só as notas do piano; os outros sons ficam como estão)
 const fs = require("fs");
 const path = require("path");
 
@@ -125,9 +126,10 @@ const SOUNDS = {
 };
 
 // Notas do piano (usadas no celular; no site as notas são sintetizadas na hora).
-// midi 60 = Dó central. Cada nota tem a fundamental e alguns harmônicos que somem aos poucos.
-const PIANO_FIRST = 60;
-const PIANO_LAST = 76;
+// midi 60 = Dó central. São as 61 teclas do piano estilo Roblox: do Dó 2 (36) ao Dó 7 (96).
+// Cada nota tem a fundamental e alguns harmônicos que somem aos poucos.
+const PIANO_FIRST = 36;
+const PIANO_LAST = 96;
 const pianoVoices = (midi) => {
   const freq = 440 * Math.pow(2, (midi - 69) / 12);
   return [
@@ -144,7 +146,9 @@ for (let midi = PIANO_FIRST; midi <= PIANO_LAST; midi++) {
 }
 console.log(`piano: ${PIANO_LAST - PIANO_FIRST + 1} notas`);
 
-for (const [name, voices] of Object.entries(SOUNDS)) {
+const ONLY_PIANO = process.argv.includes("piano");
+
+for (const [name, voices] of ONLY_PIANO ? [] : Object.entries(SOUNDS)) {
   const file = path.join(OUT, `${name}.wav`);
   fs.writeFileSync(file, toWav(render(voices)));
   console.log(`${name}.wav`);

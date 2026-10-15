@@ -20,6 +20,7 @@ const MAX_BOARD_WIDTH = 720;
 //   mode   → modo escolhido (um item de game.modes)
 //   finish → chame com { score, stars, message, stats, detail } quando a partida acabar
 //   area   → { width, height } disponível para desenhar o tabuleiro
+//            (no máximo 720 de largura; o jogo pode pedir mais com "boardWidth" em data/games.js)
 export default function GameShell({ game, children }) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -62,7 +63,7 @@ export default function GameShell({ game, children }) {
   function handleLayout(event) {
     const { width, height } = event.nativeEvent.layout;
     setArea({
-      width: Math.min(width, MAX_BOARD_WIDTH) - 24,
+      width: Math.min(width, game.boardWidth || MAX_BOARD_WIDTH) - 24,
       height: height - insets.bottom - 12,
     });
   }
