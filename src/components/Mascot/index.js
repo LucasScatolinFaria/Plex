@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
-import { Animated, Platform, View } from "react-native";
+import { Animated, Platform, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import Float from "../Float";
 import useMotion from "../../hooks/useMotion";
-import { glow, nativeDriver } from "../../theme";
+import { fonts, glow, nativeDriver } from "../../theme";
 import { followPointer, hasMouse } from "../../utils/pointer";
 
 // no navegador os olhos deslizam até o ponto novo em vez de pular
@@ -61,7 +61,8 @@ function Mouth({ mood, unit }) {
 }
 
 // Bip, o robozinho do SESI Kids. mood = "happy" | "excited" | "sad" | "thinking" | "wink"
-export default function Mascot({ size = 120, mood = "happy", style }) {
+// sporty = Bip Craque, o Bip do JES Kids: faixa na testa, camisa 10, bola na antena e outra no pé.
+export default function Mascot({ size = 120, mood = "happy", sporty = false, style }) {
   const unit = size;
   const motion = useMotion();
   const blink = useRef(new Animated.Value(1)).current;
@@ -133,23 +134,29 @@ export default function Mascot({ size = 120, mood = "happy", style }) {
       >
         {/* antena */}
         <Float kind="beat" duration={800}>
-          <View
-            style={[
-              {
-                width: unit * 0.13,
-                height: unit * 0.13,
-                borderRadius: unit,
-                backgroundColor: mood === "sad" ? "#94A3B8" : "#FFD23F",
-              },
-              mood === "sad" ? null : glow("rgba(255,210,63,0.9)", unit * 0.14),
-            ]}
-          />
+          {sporty ? (
+            <Text allowFontScaling={false} style={{ fontSize: unit * 0.15, lineHeight: unit * 0.18 }}>
+              ⚽
+            </Text>
+          ) : (
+            <View
+              style={[
+                {
+                  width: unit * 0.13,
+                  height: unit * 0.13,
+                  borderRadius: unit,
+                  backgroundColor: mood === "sad" ? "#94A3B8" : "#FFD23F",
+                },
+                mood === "sad" ? null : glow("rgba(255,210,63,0.9)", unit * 0.14),
+              ]}
+            />
+          )}
         </Float>
         <View style={{ width: unit * 0.045, height: unit * 0.09, backgroundColor: "#C7D2FE" }} />
 
         {/* cabeça */}
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Ear unit={unit} side="left" />
+          <Ear unit={unit} side="left" sporty={sporty} />
           <LinearGradient
             colors={["#FFFFFF", "#D9E4FF"]}
             style={{
@@ -158,8 +165,10 @@ export default function Mascot({ size = 120, mood = "happy", style }) {
               borderRadius: unit * 0.26,
               alignItems: "center",
               justifyContent: "center",
+              overflow: sporty ? "hidden" : "visible",
             }}
           >
+            {sporty ? <Headband unit={unit} /> : null}
             <View
               style={{
                 width: unit * 0.78,
@@ -192,12 +201,12 @@ export default function Mascot({ size = 120, mood = "happy", style }) {
               <Cheek unit={unit} side="right" />
             </View>
           </LinearGradient>
-          <Ear unit={unit} side="right" />
+          <Ear unit={unit} side="right" sporty={sporty} />
         </View>
 
-        {/* corpo */}
+        {/* corpo (no Bip Craque é a camisa 10 do time) */}
         <LinearGradient
-          colors={["#A78BFA", "#7C3AED"]}
+          colors={sporty ? ["#FFE066", "#FFB020"] : ["#A78BFA", "#7C3AED"]}
           style={{
             width: unit * 0.52,
             height: unit * 0.2,
@@ -208,21 +217,92 @@ export default function Mascot({ size = 120, mood = "happy", style }) {
             justifyContent: "center",
           }}
         >
-          <View style={{ width: unit * 0.09, height: unit * 0.09, borderRadius: unit, backgroundColor: "#FFD23F" }} />
+          {sporty ? (
+            <>
+              <View
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  width: 0,
+                  height: 0,
+                  borderLeftWidth: unit * 0.06,
+                  borderRightWidth: unit * 0.06,
+                  borderTopWidth: unit * 0.05,
+                  borderLeftColor: "transparent",
+                  borderRightColor: "transparent",
+                  borderTopColor: "#16A34A",
+                }}
+              />
+              <Text
+                allowFontScaling={false}
+                style={{
+                  marginTop: unit * 0.03,
+                  fontFamily: fonts.title,
+                  fontSize: unit * 0.11,
+                  lineHeight: unit * 0.14,
+                  color: "#15803D",
+                }}
+              >
+                10
+              </Text>
+            </>
+          ) : (
+            <View
+              style={{ width: unit * 0.09, height: unit * 0.09, borderRadius: unit, backgroundColor: "#FFD23F" }}
+            />
+          )}
         </LinearGradient>
+
+        {/* a bola no pé do Bip Craque */}
+        {sporty ? (
+          <Float
+            kind="bob"
+            duration={mood === "excited" ? 380 : 700}
+            style={{ position: "absolute", right: unit * 0.04, bottom: -unit * 0.06 }}
+          >
+            <Text allowFontScaling={false} style={{ fontSize: unit * 0.24, lineHeight: unit * 0.3 }}>
+              ⚽
+            </Text>
+          </Float>
+        ) : null}
       </Animated.View>
     </Float>
   );
 }
 
-function Ear({ unit, side }) {
+// faixa de atleta na testa do Bip Craque: vermelha com uma listra branca e uma estrela
+function Headband({ unit }) {
+  return (
+    <View
+      style={{
+        position: "absolute",
+        top: unit * 0.02,
+        left: 0,
+        right: 0,
+        height: unit * 0.09,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#EF4444",
+      }}
+    >
+      <View
+        style={{ position: "absolute", left: 0, right: 0, height: unit * 0.018, backgroundColor: "#FFFFFF" }}
+      />
+      <Text allowFontScaling={false} style={{ fontSize: unit * 0.07, lineHeight: unit * 0.09 }}>
+        ⭐
+      </Text>
+    </View>
+  );
+}
+
+function Ear({ unit, side, sporty }) {
   const radius = unit * 0.04;
   return (
     <View
       style={{
         width: unit * 0.07,
         height: unit * 0.24,
-        backgroundColor: "#8B5CF6",
+        backgroundColor: sporty ? "#16A34A" : "#8B5CF6",
         borderTopLeftRadius: side === "left" ? radius : 0,
         borderBottomLeftRadius: side === "left" ? radius : 0,
         borderTopRightRadius: side === "right" ? radius : 0,

@@ -19,6 +19,8 @@ const HAPTICS = {
   match: "success",
   win: "success",
   levelup: "success",
+  goal: "success",
+  whistle: "light",
   wrong: "error",
   lose: "error",
 };

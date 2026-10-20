@@ -15,6 +15,8 @@ import { Nunito_800ExtraBold } from "@expo-google-fonts/nunito/800ExtraBold";
 import Routes from "./src/routes/index";
 import { documentTitle, linking } from "./src/routes/linking";
 import AuthProvider from "./src/contexts/auth";
+import JesProvider from "./src/contexts/jes";
+import ModeProvider from "./src/contexts/mode";
 import ProgressProvider from "./src/contexts/progress";
 import SettingsProvider from "./src/contexts/settings";
 import { colors } from "./src/theme";
@@ -61,8 +63,12 @@ export default function App() {
       <SettingsProvider>
         <AuthProvider>
           <ProgressProvider>
-            <StatusBar barStyle="light-content" />
-            <Routes />
+            <JesProvider>
+              <ModeProvider>
+                <StatusBar barStyle="light-content" />
+                <Routes />
+              </ModeProvider>
+            </JesProvider>
           </ProgressProvider>
         </AuthProvider>
       </SettingsProvider>

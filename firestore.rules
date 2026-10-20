@@ -7,6 +7,12 @@ rules_version = '2';
 //   progress/{uid}  progresso dos jogos: estrelas, recordes, conquistas. Só o dono lê e altera.
 //   ranking/{uid}   o que aparece no ranking: nome, avatar, estrelas e XP. Visitante só vê visitantes
 //                   e quem tem conta só vê quem tem conta.
+//   jesMatches/{id} JES Kids: os jogos com placar ao vivo. Todo mundo lê (o placar abre até sem conta);
+//                   só organizador marca, muda e apaga.
+//   jesStaff/{uid}  JES Kids: quem é organizador (entrou com o código do organizador).
+//   jesConfig/teams JES Kids: nome, bicho e cor de cada sala. Todo mundo lê; só organizador muda.
+//   jesPoints/{id}  JES Kids: pontos extras dados a uma sala. Todo mundo lê; só organizador dá e tira.
+//   countryRooms/{código}  salas do jogo Países do Mundo online (src/services/countryRooms.js).
 // Todo o resto do banco fica fechado.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -26,6 +32,43 @@ service cloud.firestore {
     match /ranking/{userId} {
       allow read: if request.auth != null && resource.data.guest == isGuest();
       allow create, update: if isOwner(userId) && validRanking();
+    }
+
+    match /jesMatches/{matchId} {
+      allow read: if true;
+      allow create, update: if isJesStaff() && validMatch();
+      allow delete: if isJesStaff();
+    }
+
+    match /jesConfig/{docId} {
+      allow read: if true;
+      allow create, update: if docId == "teams" && isJesStaff() && validTeams();
+    }
+
+    match /jesPoints/{pointId} {
+      allow read: if true;
+      allow create: if isJesStaff() && validBonus();
+      allow delete: if isJesStaff();
+    }
+
+    // Sala do jogo de países: quem está conectado abre pelo código (listar todas não dá). Só quem está
+    // na sala mexe nela; quem está de fora só pode entrar (e não no meio de uma partida).
+    // Sala parada há mais de 3 horas pode ser reaproveitada com o mesmo código.
+    match /countryRooms/{code} {
+      allow get: if request.auth != null;
+      allow create: if request.auth != null && validRoom(code)
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.players.keys().hasOnly([request.auth.uid]);
+      allow update: if request.auth != null && validRoom(code)
+        && (request.auth.uid in resource.data.players || joiningRoom() || staleRoom());
+      allow delete: if request.auth != null && (request.auth.uid in resource.data.players || staleRoom());
+    }
+
+    // Para virar organizador, a pessoa (com conta, visitante não) grava o código no próprio documento.
+    match /jesStaff/{userId} {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId) && !isGuest() && validStaff();
+      allow delete: if isOwner(userId);
     }
 
     function isOwner(userId) {
@@ -63,6 +106,102 @@ service cloud.firestore {
         // desafio do dia (data/daily.js); progressos antigos não têm esse campo
         && data.get("daily", {}) is map
         && data.updatedAt == request.time;
+    }
+
+    // Código do organizador do JES Kids: aqui fica só o resumo (SHA-256) do código, sem traços e em
+    // maiúsculas. Para trocar: npm run jes-codigo (gera um código novo e atualiza esta linha) e publique as
+    // regras. O documento de cada organizador guarda o código que ele digitou; com o código trocado,
+    // quem entrou com o antigo perde o acesso.
+    function jesCodeOk(code) {
+      return code is string && code.size() <= 40
+        && hashing.sha256(code).toHexString().lower() == "d531d98e5327f1d0b53a08bff626e5a54d549236100f47e351dabad2e1267037";
+    }
+
+    function isJesStaff() {
+      return request.auth != null && !isGuest()
+        && exists(/databases/$(database)/documents/jesStaff/$(request.auth.uid))
+        && jesCodeOk(get(/databases/$(database)/documents/jesStaff/$(request.auth.uid)).data.code);
+    }
+
+    function validStaff() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["name", "code", "since"])
+        && data.keys().hasAll(["name", "code", "since"])
+        && validName(data.name)
+        && jesCodeOk(data.code)
+        && data.since == request.time;
+    }
+
+    // jogo do JES Kids (src/services/jes.js); campo novo no jogo precisa entrar nas duas listas
+    function validMatch() {
+      let data = request.resource.data;
+      let fields = ["division", "sport", "teamA", "teamB", "date", "time", "place", "status",
+                    "scoreA", "scoreB", "clock", "events", "updatedAt"];
+      return data.keys().hasOnly(fields)
+        && data.keys().hasAll(fields)
+        && data.division in ["12", "34", "56"]
+        && data.sport is string && data.sport.size() > 0 && data.sport.size() <= 30
+        && data.teamA is string && data.teamA.size() > 0 && data.teamA.size() <= 4
+        && data.teamB is string && data.teamB.size() > 0 && data.teamB.size() <= 4
+        && data.teamA != data.teamB
+        && data.date is string && data.date.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")
+        && data.time is string && data.time.matches("[0-9]{2}:[0-9]{2}")
+        && data.place is string && data.place.size() <= 40
+        && data.status in ["scheduled", "live", "finished"]
+        && data.scoreA is int && data.scoreA >= 0 && data.scoreA <= 999
+        && data.scoreB is int && data.scoreB >= 0 && data.scoreB <= 999
+        && data.clock is map
+        // MAX_EVENTS do src/services/jes.js
+        && data.events is list && data.events.size() <= 120
+        && data.updatedAt == request.time;
+    }
+
+    // as 12 salas de data/jes.js (o conteúdo de cada uma é nome, apelido, bicho e cor)
+    function validTeams() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["teams", "updatedAt"])
+        && data.teams is map
+        && data.teams.keys().hasOnly(["1A", "1B", "2A", "2B", "3A", "3B", "4A", "4B", "5A", "5B", "6A", "6B"])
+        && data.updatedAt == request.time;
+    }
+
+    function validBonus() {
+      let data = request.resource.data;
+      let fields = ["division", "team", "points", "reason", "sport", "createdAt"];
+      return data.keys().hasOnly(fields)
+        && data.keys().hasAll(fields)
+        && data.division in ["12", "34", "56"]
+        && data.team is string && data.team.size() > 0 && data.team.size() <= 4
+        && data.points is int && data.points != 0 && data.points >= -50 && data.points <= 50
+        && data.reason is string && data.reason.size() > 0 && data.reason.size() <= 60
+        && data.sport is string && data.sport.size() <= 30
+        && data.createdAt == request.time;
+    }
+
+    // sala do jogo de países; campo novo na sala precisa entrar nesta lista
+    function validRoom(code) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["code", "host", "status", "speed", "players", "turn", "turnAt", "round", "game",
+                                  "used", "log", "out", "winner", "lastType", "updatedAt"])
+        && code.matches("[A-Z]{4}") && data.code == code
+        && data.status in ["lobby", "playing", "over"]
+        && data.speed in [9, 14, 20]
+        && data.players is map && data.players.size() <= 8
+        && data.used is list && data.used.size() <= 200
+        && data.log is list && data.log.size() <= 30
+        && data.out is list && data.out.size() <= 8
+        && data.updatedAt == request.time;
+    }
+
+    // entrar na sala: a pessoa só se acrescenta na lista de jogadores, fora do meio de uma partida
+    function joiningRoom() {
+      return resource.data.status != "playing"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt"])
+        && request.resource.data.players.diff(resource.data.players).affectedKeys().hasOnly([request.auth.uid]);
+    }
+
+    function staleRoom() {
+      return resource.data.updatedAt < request.time - duration.value(3, "h");
     }
 
     function validRanking() {

@@ -390,6 +390,47 @@ export const GAMES = [
       { id: "dificil", label: "5 lixeiras", emoji: "🔥" },
     ],
   },
+  {
+    id: "frutas",
+    route: "Fruits",
+    path: "jogo/conta-frutas",
+    title: "Conta Frutas",
+    emoji: "🍎",
+    category: "Matemática",
+    tagline: "Quantas frutas tem no cartão?",
+    description: "Conte as frutas e escolha o número certo.",
+    howTo: ["Conte as frutas do cartão.", "Toque no número certo.", "No difícil tem relógio!"],
+    colors: ["#FCA5A5", "#DC2626"],
+    bg: ["#450A0A", "#991B1B", "#DC2626"],
+    text: "#FFFFFF",
+    modes: DIFFICULTIES,
+  },
+  {
+    id: "paises",
+    route: "Countries",
+    path: "jogo/paises",
+    title: "Países do Mundo",
+    emoji: "🌍",
+    category: "Geografia",
+    tagline: "Quantos países você conhece?",
+    description:
+      "Digite nomes de países e veja o mapa do mundo acender. No Online, passe a batata quente com os amigos!",
+    howTo: [
+      "Digite o nome de um país e aperte Enter (sem acento também vale).",
+      "No Treino, acenda o máximo de países no mapa em 4 minutos.",
+      "No Online, diga um país que ninguém disse antes que a batata queime!",
+    ],
+    colors: ["#34D399", "#0EA5E9"],
+    bg: ["#062A4D", "#0B4A7A", "#0E7490"],
+    text: "#FFFFFF",
+    // o mapa-múndi precisa de mais espaço que os outros tabuleiros
+    boardWidth: 1100,
+    modeLabel: "Como você quer jogar?",
+    modes: [
+      { id: "treino", label: "Treino", emoji: "🧭" },
+      { id: "online", label: "Online", emoji: "🌐" },
+    ],
+  },
 ];
 
 export const CATEGORIES = ["Todos", ...new Set(GAMES.map((game) => game.category))];

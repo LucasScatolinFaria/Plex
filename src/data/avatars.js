@@ -15,5 +15,10 @@ export const AVATARS = [
 
 export const GUEST_AVATAR = { id: "visitante", emoji: "👽", colors: ["#5EEAD4", "#6366F1"] };
 
+// o Bip quando entra como jogador (jogo de países online)
+export const BOT_AVATAR = { id: "robo", emoji: "🤖", colors: ["#C7D2FE", "#8B5CF6"] };
+
 export const getAvatar = (id) =>
-  AVATARS.find((avatar) => avatar.id === id) || (id === GUEST_AVATAR.id ? GUEST_AVATAR : AVATARS[0]);
+  AVATARS.find((avatar) => avatar.id === id) ||
+  [GUEST_AVATAR, BOT_AVATAR].find((avatar) => avatar.id === id) ||
+  AVATARS[0];

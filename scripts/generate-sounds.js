@@ -1,6 +1,7 @@
 // Gera os efeitos sonoros do SESI Kids em assets/sounds (sem precisar baixar nada).
-// Uso: npm run sounds            (tudo)
-//      npm run sounds -- piano   (só as notas do piano; os outros sons ficam como estão)
+// Uso: npm run sounds                  (tudo)
+//      npm run sounds -- piano         (só as notas do piano; os outros sons ficam como estão)
+//      npm run sounds -- whistle goal  (só os sons com esses nomes)
 const fs = require("fs");
 const path = require("path");
 
@@ -29,19 +30,21 @@ function wave(type, phase) {
   }
 }
 
-// voice: { freq, to, start, dur, type, gain, attack, curve }
+// voice: { freq, to, start, dur, type, gain, attack, curve, vibrato }
+// vibrato = [vezes por segundo, quantos Hz a nota sobe e desce] (o trinado do apito do juiz)
 function render(voices) {
   const total = Math.max(...voices.map((v) => (v.start || 0) + v.dur)) + 0.02;
   const samples = new Float32Array(Math.ceil(total * RATE));
 
   for (const voice of voices) {
-    const { freq = 440, to = freq, start = 0, dur, type = "sine", gain = 0.5, attack = 0.006, curve = 2 } = voice;
+    const { freq = 440, to = freq, start = 0, dur, type = "sine", gain = 0.5, attack = 0.006, curve = 2, vibrato } = voice;
     const begin = Math.floor(start * RATE);
     const length = Math.floor(dur * RATE);
     let phase = 0;
     for (let i = 0; i < length; i++) {
       const t = i / length;
-      phase += (2 * Math.PI * (freq + (to - freq) * t)) / RATE;
+      const wobble = vibrato ? vibrato[1] * Math.sin((2 * Math.PI * vibrato[0] * i) / RATE) : 0;
+      phase += (2 * Math.PI * (freq + (to - freq) * t + wobble)) / RATE;
       const envelope = Math.min(1, i / (attack * RATE)) * Math.pow(1 - t, curve);
       samples[begin + i] += wave(type, phase) * envelope * gain;
     }
@@ -123,6 +126,24 @@ const SOUNDS = {
   pad1: [{ freq: NOTE.A4, dur: 0.34, type: "bell", gain: 0.5, curve: 0.8 }],
   pad2: [{ freq: NOTE.Cs5, dur: 0.34, type: "bell", gain: 0.5, curve: 0.8 }],
   pad3: [{ freq: NOTE.E5, dur: 0.34, type: "bell", gain: 0.5, curve: 0.8 }],
+  // JES Kids: apito do juiz (fi-fiiii) ao entrar no modo esportes
+  whistle: [
+    { freq: 2650, dur: 0.15, gain: 0.32, attack: 0.008, curve: 0.5, vibrato: [32, 150] },
+    { freq: 2650, start: 0.21, dur: 0.5, gain: 0.32, attack: 0.01, curve: 0.9, vibrato: [32, 150] },
+    { type: "noise", dur: 0.15, gain: 0.03, curve: 1 },
+    { type: "noise", start: 0.21, dur: 0.48, gain: 0.03, curve: 1.2 },
+  ],
+  // JES Kids: buzina de estádio + fanfarra quando sai ponto num jogo ao vivo
+  goal: [
+    { freq: 233.08, dur: 0.95, type: "square", gain: 0.16, attack: 0.05, curve: 0.8 },
+    { freq: 293.66, dur: 0.95, type: "square", gain: 0.13, attack: 0.05, curve: 0.8 },
+    { freq: 349.23, dur: 0.95, type: "square", gain: 0.12, attack: 0.05, curve: 0.8 },
+    ...[NOTE.C5, NOTE.E5, NOTE.G5, NOTE.C6].map((freq, index) => ({
+      freq, start: 0.55 + index * 0.09, dur: 0.3, type: "bell", gain: 0.32,
+    })),
+    { freq: NOTE.C6, start: 0.9, dur: 0.7, type: "bell", gain: 0.26, curve: 1.4 },
+    { freq: NOTE.G5, start: 0.9, dur: 0.7, type: "bell", gain: 0.2, curve: 1.4 },
+  ],
 };
 
 // Notas do piano (usadas no celular; no site as notas são sintetizadas na hora).
@@ -139,16 +160,20 @@ const pianoVoices = (midi) => {
   ];
 };
 
+// sem nomes gera tudo; com nomes, só eles ("piano" = as notas do piano)
+const ONLY = process.argv.slice(2);
+const wanted = (name) => ONLY.length === 0 || ONLY.includes(name);
+
 fs.mkdirSync(OUT, { recursive: true });
-fs.mkdirSync(path.join(OUT, "piano"), { recursive: true });
-for (let midi = PIANO_FIRST; midi <= PIANO_LAST; midi++) {
-  fs.writeFileSync(path.join(OUT, "piano", `n${midi}.wav`), toWav(render(pianoVoices(midi))));
+if (wanted("piano")) {
+  fs.mkdirSync(path.join(OUT, "piano"), { recursive: true });
+  for (let midi = PIANO_FIRST; midi <= PIANO_LAST; midi++) {
+    fs.writeFileSync(path.join(OUT, "piano", `n${midi}.wav`), toWav(render(pianoVoices(midi))));
+  }
+  console.log(`piano: ${PIANO_LAST - PIANO_FIRST + 1} notas`);
 }
-console.log(`piano: ${PIANO_LAST - PIANO_FIRST + 1} notas`);
 
-const ONLY_PIANO = process.argv.includes("piano");
-
-for (const [name, voices] of ONLY_PIANO ? [] : Object.entries(SOUNDS)) {
+for (const [name, voices] of Object.entries(SOUNDS).filter(([name]) => wanted(name))) {
   const file = path.join(OUT, `${name}.wav`);
   fs.writeFileSync(file, toWav(render(voices)));
   console.log(`${name}.wav`);

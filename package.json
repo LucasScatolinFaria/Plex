@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "sounds": "node scripts/generate-sounds.js",
+    "jes-codigo": "node scripts/jes-codigo.js",
     "deploy": "npx firebase-tools deploy"
   },
   "dependencies": {

@@ -40,6 +40,30 @@ export const gradients = {
   gold: ["#FFE27A", "#FFB020"],
 };
 
+// JES Kids (modo esportes): gramado à noite, placar de estádio e muito amarelo e laranja
+export const jes = {
+  night: "#03140B",
+  bar: "#05190F",
+  field: "#0B3D22",
+  grass: "#16A34A",
+  lime: "#A3E635",
+  orange: "#FF7A1A",
+  live: "#FF3B4E",
+  board: "#07120C",
+  card: "rgba(4, 28, 16, 0.72)",
+  cardStrong: "rgba(4, 28, 16, 0.9)",
+  line: "rgba(255,255,255,0.16)",
+  textSoft: "#C9E8D3",
+  muted: "#8DB59C",
+};
+
+export const jesGradients = {
+  hero: ["#0B4A27", "#138A43", "#3DBB5C"],
+  board: ["#0D1B14", "#050C08"],
+  sesi: ["#8B5CF6", "#5B21B6"],
+  ball: ["#4ADE80", "#15803D"],
+};
+
 export const fonts = {
   title: "Fredoka_700Bold",
   heading: "Fredoka_600SemiBold",

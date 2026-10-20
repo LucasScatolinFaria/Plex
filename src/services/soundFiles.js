@@ -16,4 +16,6 @@ export const SOUND_FILES = {
   pad1: require("../../assets/sounds/pad1.wav"),
   pad2: require("../../assets/sounds/pad2.wav"),
   pad3: require("../../assets/sounds/pad3.wav"),
+  whistle: require("../../assets/sounds/whistle.wav"),
+  goal: require("../../assets/sounds/goal.wav"),
 };

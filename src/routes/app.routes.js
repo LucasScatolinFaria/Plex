@@ -8,6 +8,8 @@ import { GAMES } from "../data/games";
 import useLayout from "../hooks/useLayout";
 import Achievements from "../pages/Achievements";
 import Home from "../pages/Home";
+import JesMatch from "../pages/jes/Match";
+import JesOrganizer from "../pages/jes/Organizer";
 import Profile from "../pages/Profile";
 import Ranking from "../pages/Ranking";
 import SignUp from "../pages/SingUp";
@@ -15,7 +17,9 @@ import BugHunt from "../pages/games/BugHunt";
 import Chess from "../pages/games/Chess";
 import Clock from "../pages/games/Clock";
 import Compare from "../pages/games/Compare";
+import Countries from "../pages/games/Countries";
 import English from "../pages/games/English";
+import Fruits from "../pages/games/Fruits";
 import Genius from "../pages/games/Genius";
 import MathChallenge from "../pages/games/MathChallenge";
 import Memory from "../pages/games/Memory";
@@ -28,7 +32,8 @@ import Sequence from "../pages/games/Sequence";
 import SlidePuzzle from "../pages/games/SlidePuzzle";
 import Syllables from "../pages/games/Syllables";
 import TicTacToe from "../pages/games/TicTacToe";
-import { colors } from "../theme";
+import { colors, jes } from "../theme";
+import JesRoutes from "./jes.routes";
 
 const AppStack = createNativeStackNavigator();
 const AppTabs = createBottomTabNavigator();
@@ -41,6 +46,7 @@ const GAME_SCREENS = {
   Quiz,
   TicTacToe,
   Chess,
+  Fruits,
   Genius,
   BugHunt,
   SlidePuzzle,
@@ -52,6 +58,7 @@ const GAME_SCREENS = {
   Compare,
   Money,
   Recycle,
+  Countries,
 };
 
 function Tabs() {
@@ -86,6 +93,22 @@ function AppRoutes() {
       }}
     >
       <AppStack.Screen name="Tabs" component={Tabs} options={{ title: "Jogos" }} />
+      {/* JES Kids (esportes): a troca de site já tem a cortina animada (contexts/mode.js), então sem animação aqui */}
+      <AppStack.Screen
+        name="Jes"
+        component={JesRoutes}
+        options={{ title: "JES Kids", animation: "none", contentStyle: { backgroundColor: jes.night } }}
+      />
+      <AppStack.Screen
+        name="JesMatch"
+        component={JesMatch}
+        options={{ title: "Placar", contentStyle: { backgroundColor: jes.night } }}
+      />
+      <AppStack.Screen
+        name="JesOrganizer"
+        component={JesOrganizer}
+        options={{ title: "Organizador", contentStyle: { backgroundColor: jes.night } }}
+      />
       {/* o visitante cria a conta sem sair do app ("Guardar meu progresso"); quando a conta fica
           pronta a tela some e o app volta para onde estava */}
       {user?.guest ? (

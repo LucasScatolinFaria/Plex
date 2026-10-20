@@ -17,6 +17,17 @@ export const linking = {
           Profile: "perfil",
         },
       },
+      Jes: {
+        path: "jes-kids",
+        screens: {
+          JesLive: "",
+          JesSchedule: "jogos",
+          JesStandings: "ranking",
+          JesSports: "esportes",
+        },
+      },
+      JesMatch: "jes-kids/jogo/:id",
+      JesOrganizer: "jes-kids/organizador",
       ...Object.fromEntries(GAMES.map((game) => [game.route, game.path])),
     },
   },
@@ -32,13 +43,20 @@ const TITLE_EMOJI = {
   Entrar: "👋",
   "Criar conta": "🚀",
   Visitante: "👽",
+  "Placar ao vivo": "🔴",
+  "Tabela de jogos": "📅",
+  "Ranking das salas": "🏆",
+  Esportes: "🏅",
+  Organizador: "📋",
   ...Object.fromEntries(GAMES.map((game) => [game.title, game.emoji])),
 };
 
+// as telas do JES Kids (nomes começando com "Jes") levam o nome do site de esportes
 export const documentTitle = {
   formatter: (options, route) => {
     const title = options?.title ?? route?.name;
     if (!title) return "SESI Kids · Aprender brincando";
+    if (route?.name?.startsWith("Jes")) return `${TITLE_EMOJI[title] ?? "⚽"} ${title} · JES Kids`;
     return `${TITLE_EMOJI[title] ?? "✨"} ${title} · SESI Kids`;
   },
 };

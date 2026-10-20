@@ -10,6 +10,7 @@ import Field from "../../components/Field";
 import Logo from "../../components/Logo";
 import Mascot from "../../components/Mascot";
 import { AuthContext } from "../../contexts/auth";
+import { ModeContext } from "../../contexts/mode";
 import { GAMES } from "../../data/games";
 import useLayout from "../../hooks/useLayout";
 import useShake from "../../hooks/useShake";
@@ -37,6 +38,7 @@ export default function SignIn() {
   const insets = useSafeAreaInsets();
   const { isWide } = useLayout();
   const { signIn } = useContext(AuthContext);
+  const { switchMode } = useContext(ModeContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,6 +139,12 @@ export default function SignIn() {
                   <Link onPress={() => navigation.navigate("SignUp")}>
                     <LinkText>
                       Ainda não tem conta? <LinkStrong>Criar uma conta!</LinkStrong>
+                    </LinkText>
+                  </Link>
+                  {/* o placar do JES Kids é aberto para todo mundo, sem precisar entrar */}
+                  <Link onPress={() => switchMode("jes", () => navigation.navigate("Jes"))}>
+                    <LinkText>
+                      ⚽ Ver o placar do <LinkStrong>JES Kids</LinkStrong>
                     </LinkText>
                   </Link>
                 </Card>
