@@ -13,6 +13,7 @@ rules_version = '2';
 //   jesConfig/teams JES Kids: nome, bicho e cor de cada sala. Todo mundo lê; só organizador muda.
 //   jesPoints/{id}  JES Kids: pontos extras dados a uma sala. Todo mundo lê; só organizador dá e tira.
 //   countryRooms/{código}  salas do jogo Países do Mundo online (src/services/countryRooms.js).
+//   guessRooms/{código}    salas do jogo Quem Chutou Longe? (src/services/guessRooms.js).
 // Todo o resto do banco fica fechado.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -61,6 +62,17 @@ service cloud.firestore {
         && request.resource.data.players.keys().hasOnly([request.auth.uid]);
       allow update: if request.auth != null && validRoom(code)
         && (request.auth.uid in resource.data.players || joiningRoom() || staleRoom());
+      allow delete: if request.auth != null && (request.auth.uid in resource.data.players || staleRoom());
+    }
+
+    // Sala do Quem Chutou Longe?: as mesmas combinações da sala do jogo de países.
+    match /guessRooms/{code} {
+      allow get: if request.auth != null;
+      allow create: if request.auth != null && validGuessRoom(code)
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.players.keys().hasOnly([request.auth.uid]);
+      allow update: if request.auth != null && validGuessRoom(code)
+        && (request.auth.uid in resource.data.players || joiningGuessRoom() || staleRoom());
       allow delete: if request.auth != null && (request.auth.uid in resource.data.players || staleRoom());
     }
 
@@ -181,11 +193,13 @@ service cloud.firestore {
     // sala do jogo de países; campo novo na sala precisa entrar nesta lista
     function validRoom(code) {
       let data = request.resource.data;
-      return data.keys().hasOnly(["code", "host", "status", "speed", "players", "turn", "turnAt", "round", "game",
-                                  "used", "log", "out", "winner", "lastType", "updatedAt"])
+      return data.keys().hasOnly(["code", "host", "status", "speed", "resetUsed", "players", "turn", "turnAt",
+                                  "round", "game", "used", "log", "out", "winner", "lastType", "updatedAt"])
         && code.matches("[A-Z]{4}") && data.code == code
         && data.status in ["lobby", "playing", "over"]
         && data.speed in [9, 14, 20]
+        // salas criadas antes da opção não têm o campo
+        && data.get("resetUsed", true) is bool
         && data.players is map && data.players.size() <= 8
         && data.used is list && data.used.size() <= 200
         && data.log is list && data.log.size() <= 30
@@ -196,6 +210,29 @@ service cloud.firestore {
     // entrar na sala: a pessoa só se acrescenta na lista de jogadores, fora do meio de uma partida
     function joiningRoom() {
       return resource.data.status != "playing"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt"])
+        && request.resource.data.players.diff(resource.data.players).affectedKeys().hasOnly([request.auth.uid]);
+    }
+
+    // sala do Quem Chutou Longe?; campo novo na sala precisa entrar nesta lista
+    function validGuessRoom(code) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(["code", "host", "status", "rounds", "round", "question", "asked", "players",
+                                  "answers", "votes", "phaseAt", "result", "game", "winners", "updatedAt"])
+        && code.matches("[A-Z]{4}") && data.code == code
+        && data.status in ["lobby", "answer", "vote", "reveal", "over"]
+        && data.rounds in [3, 5, 7]
+        && data.players is map && data.players.size() <= 8
+        && data.answers is map && data.answers.size() <= 8
+        && data.votes is map && data.votes.size() <= 8
+        && data.asked is list && data.asked.size() <= 7
+        && data.winners is list && data.winners.size() <= 8
+        && data.updatedAt == request.time;
+    }
+
+    // entrar na sala: a pessoa só se acrescenta na lista de jogadores, fora do meio de uma partida
+    function joiningGuessRoom() {
+      return resource.data.status in ["lobby", "over"]
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt"])
         && request.resource.data.players.diff(resource.data.players).affectedKeys().hasOnly([request.auth.uid]);
     }

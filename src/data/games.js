@@ -431,6 +431,27 @@ export const GAMES = [
       { id: "online", label: "Online", emoji: "🌐" },
     ],
   },
+  {
+    id: "chute",
+    route: "WildGuess",
+    path: "jogo/quem-chutou-longe",
+    title: "Quem Chutou Longe?",
+    emoji: "🕵️",
+    category: "Conhecimento",
+    tagline: "Chute um número e descubra quem viajou!",
+    description:
+      "Jogo online com os amigos: todo mundo chuta a resposta de uma pergunta. Depois, vire detetive e descubra quem chutou mais longe!",
+    howTo: [
+      "Todo mundo responde a mesma pergunta com um número (pode chutar!).",
+      "Aparecem a resposta certa e os chutes, sem os nomes: vote em quem chutou mais longe.",
+      "Descobriu? +1 ponto. Chutou mais longe e ninguém descobriu? +2 pontos para você!",
+    ],
+    colors: ["#F472B6", "#8B5CF6"],
+    bg: ["#2A0B4D", "#4C1D95", "#7E22CE"],
+    text: "#FFFFFF",
+    modeLabel: "Como você quer jogar?",
+    modes: [{ id: "online", label: "Online", emoji: "🌐" }],
+  },
 ];
 
 export const CATEGORIES = ["Todos", ...new Set(GAMES.map((game) => game.category))];

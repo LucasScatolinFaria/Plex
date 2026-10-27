@@ -5,8 +5,10 @@ import { dayKey } from "../utils/progress";
 
 export const DAILY_XP = 50;
 
-// o Xadrez fica de fora dos desafios de um jogo só: lá estrela é só vencendo o Bip, e as partidas são longas
-const STAR_GAMES = GAMES.filter((game) => game.id !== "xadrez");
+// Ficam de fora dos desafios de um jogo só: o Xadrez (lá estrela é só vencendo o Bip, e as partidas são
+// longas) e o Quem Chutou Longe? (só online, com pelo menos 3 jogadores). Jogo novo que entrar nesta lista
+// muda o sorteio de todos os dias, inclusive o de hoje.
+const STAR_GAMES = GAMES.filter((game) => !["xadrez", "chute"].includes(game.id));
 
 // sorteio com semente (mulberry32): a mesma data sempre dá o mesmo desafio
 function randomFor(text) {

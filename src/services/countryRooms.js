@@ -1,11 +1,16 @@
 // Salas do jogo Países do Mundo online ("batata quente dos países"), no Firestore:
-//   countryRooms/{CÓDIGO}  quem está na sala, de quem é a vez, os países já ditos na rodada e as vidas.
+//   countryRooms/{CÓDIGO}  quem está na sala, de quem é a vez, os países já ditos e as vidas.
 // O código tem 4 letras fáceis de falar (ex.: BOLA). Toda mudança é uma transação: dois jogadores
 // mexendo ao mesmo tempo não se atropelam. Sala abandonada há mais de 3 horas pode ser reaproveitada.
+// resetUsed (o dono escolhe): quando a batata queima, os países ditos voltam a valer (true, o padrão)
+// ou continuam fora até o fim da partida (false).
 import { deleteField, doc, onSnapshot, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
 
 import { db } from "./firebase";
 import { BOT_AVATAR } from "../data/avatars";
+import { RoomError, STALE, newRoomCode, nextSeat, seatsOf, stamp } from "./rooms";
+
+export { RoomError, normalizeRoomCode, seatsOf } from "./rooms";
 
 export const LIVES = 3;
 export const MAX_PLAYERS = 8;
@@ -23,23 +28,8 @@ const BOTS = [
 ];
 
 const LOG_SIZE = 30;
-const STALE = 3 * 60 * 60 * 1000;
-const CONSONANTS = "BCDFGJLMNPRSTVZ";
-const VOWELS = "AEIOU";
 
 const roomRef = (code) => doc(db, "countryRooms", code);
-const letter = (letters) => letters[Math.floor(Math.random() * letters.length)];
-const newCode = () => letter(CONSONANTS) + letter(VOWELS) + letter(CONSONANTS) + letter(VOWELS);
-const stamp = (changes) => ({ ...changes, updatedAt: serverTimestamp() });
-
-// erro com mensagem para mostrar na tela
-export class RoomError extends Error {}
-
-export const normalizeRoomCode = (text) =>
-  text
-    .toUpperCase()
-    .replace(/[^A-Z]/g, "")
-    .slice(0, 4);
 
 function toRoom(snapshot) {
   if (!snapshot.exists()) return null;
@@ -55,8 +45,6 @@ export function watchRoom(code, onChange, onError) {
     onError
   );
 }
-
-export const seatsOf = (players) => Object.entries(players).sort((a, b) => a[1].seat - b[1].seat);
 
 // próximo jogador com vida depois de "from", na ordem das cadeiras da roda
 export function nextAlive(players, from) {
@@ -77,11 +65,9 @@ const newPlayer = (user, seat) => ({
   bot: false,
 });
 
-const nextSeat = (players) => Math.max(-1, ...Object.values(players).map((player) => player.seat)) + 1;
-
 export async function createRoom(user) {
   for (let attempt = 0; attempt < 6; attempt++) {
-    const code = newCode();
+    const code = newRoomCode();
     const created = await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(roomRef(code));
       const old = snapshot.exists() ? snapshot.data() : null;
@@ -93,6 +79,7 @@ export async function createRoom(user) {
           host: user.id,
           status: "lobby",
           speed: 14,
+          resetUsed: true,
           players: { [user.id]: newPlayer(user, 0) },
           turn: null,
           turnAt: null,
@@ -157,6 +144,11 @@ export function leaveRoom(code, uid) {
 }
 
 export const setSpeed = (code, speed) => updateDoc(roomRef(code), stamp({ speed }));
+
+export const setResetUsed = (code, resetUsed) => updateDoc(roomRef(code), stamp({ resetUsed }));
+
+// salas criadas antes da opção existir não têm o campo: nelas os países sempre voltavam a valer
+export const resetsUsed = (room) => room.resetUsed !== false;
 
 export const removePlayer = (code, id) => updateDoc(roomRef(code), stamp({ [`players.${id}`]: deleteField() }));
 
@@ -237,7 +229,8 @@ export function answerTurn(code, by, countryId) {
 }
 
 // O tempo acabou e a batata queimou na mão de quem estava com ela: perde uma vida e começa outra rodada
-// (com os países liberados de novo). turnAt confere que ainda é a mesma vez, para não queimar duas vezes.
+// (com os países liberados de novo, se a sala usa essa regra). turnAt confere que ainda é a mesma vez,
+// para não queimar duas vezes.
 export function burnTurn(code, turn, turnAt) {
   return runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(roomRef(code));
@@ -264,7 +257,7 @@ export function burnTurn(code, turn, turnAt) {
           out,
           log,
           round: room.round + 1,
-          used: [],
+          used: resetsUsed(room) ? [] : room.used,
           turn: nextAlive(players, turn),
           turnAt: serverTimestamp(),
           lastType: "burn",

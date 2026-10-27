@@ -18,6 +18,7 @@ import Chess from "../pages/games/Chess";
 import Clock from "../pages/games/Clock";
 import Compare from "../pages/games/Compare";
 import Countries from "../pages/games/Countries";
+import WildGuess from "../pages/games/WildGuess";
 import English from "../pages/games/English";
 import Fruits from "../pages/games/Fruits";
 import Genius from "../pages/games/Genius";
@@ -59,6 +60,7 @@ const GAME_SCREENS = {
   Money,
   Recycle,
   Countries,
+  WildGuess,
 };
 
 function Tabs() {

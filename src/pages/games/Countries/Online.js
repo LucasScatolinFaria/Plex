@@ -29,7 +29,9 @@ import {
   leaveRoom,
   normalizeRoomCode,
   removePlayer,
+  resetsUsed,
   seatsOf,
+  setResetUsed,
   setSpeed,
   startGame,
   watchRoom,
@@ -79,6 +81,12 @@ const BIP_MISS = { 20: 0.1, 14: 0.15, 9: 0.25 };
 
 const hearts = (lives) => "❤️".repeat(Math.max(0, lives)) + "🤍".repeat(Math.max(0, LIVES - lives));
 
+// o que acontece com os países já ditos quando a batata queima (o dono da sala escolhe)
+const USED_RULES = [
+  { reset: true, emoji: "🔄", label: "Voltam a valer" },
+  { reset: false, emoji: "📌", label: "Continuam fora" },
+];
+
 function Lobby({ busy, error, onCreate, onJoin, onBip }) {
   const [value, setValue] = useState("");
 
@@ -127,7 +135,7 @@ function Lobby({ busy, error, onCreate, onJoin, onBip }) {
   );
 }
 
-function Waiting({ room, me, code, busy, error, onStart, onSpeed, onBot, onRemove, onExit }) {
+function Waiting({ room, me, code, busy, error, onStart, onSpeed, onResetUsed, onBot, onRemove, onExit }) {
   const host = room.host === me;
   const seats = seatsOf(room.players);
   const hostName = room.players[room.host]?.name ?? "o dono da sala";
@@ -187,6 +195,22 @@ function Waiting({ room, me, code, busy, error, onStart, onSpeed, onBot, onRemov
                 </Bouncy>
               ))}
             </Speeds>
+            <CardText>Quando a batata queimar, os países já ditos:</CardText>
+            <Speeds>
+              {USED_RULES.map((rule) => (
+                <Bouncy
+                  key={rule.label}
+                  onPress={() => onResetUsed(rule.reset)}
+                  accessibilityState={{ selected: resetsUsed(room) === rule.reset }}
+                  accessibilityLabel={`Países já ditos: ${rule.label.toLowerCase()}`}
+                >
+                  <SpeedChip $selected={resetsUsed(room) === rule.reset}>
+                    <Text style={{ fontSize: 22, lineHeight: 28 }}>{rule.emoji}</Text>
+                    <SpeedLabel>{rule.label}</SpeedLabel>
+                  </SpeedChip>
+                </Bouncy>
+              ))}
+            </Speeds>
             <Button
               title="Chamar o Bip para jogar"
               icon="hardware-chip"
@@ -210,7 +234,11 @@ function Waiting({ room, me, code, busy, error, onStart, onSpeed, onBot, onRemov
         ) : (
           <CardText>
             ⏳ Esperando {hostName} começar a partida... (batata{" "}
-            {SPEEDS.find((speed) => speed.id === room.speed)?.label.toLowerCase()})
+            {SPEEDS.find((speed) => speed.id === room.speed)?.label.toLowerCase()};{" "}
+            {resetsUsed(room)
+              ? "quando ela queima, os países voltam a valer"
+              : "país dito fica fora até o fim da partida"}
+            )
           </CardText>
         )}
 
@@ -456,12 +484,17 @@ function Match({ room, me, code, clock, area, onSaid }) {
       <Feedback feedback={feedback} />
 
       <SectionLabel>
-        Rodada {room.round} · {room.used.length} {room.used.length === 1 ? "país" : "países"} na roda
+        Rodada {room.round} · {room.used.length} {room.used.length === 1 ? "país" : "países"}{" "}
+        {resetsUsed(room) ? "na roda" : "já ditos na partida"}
       </SectionLabel>
       {room.used.length > 0 ? (
         <CountryChips ids={[...room.used].reverse()} />
       ) : (
-        <Muted>Ninguém disse nenhum país ainda nesta rodada. Os países repetem a cada rodada nova!</Muted>
+        <Muted>
+          {resetsUsed(room)
+            ? "Ninguém disse nenhum país ainda nesta rodada. Os países repetem a cada rodada nova!"
+            : "Ninguém disse nenhum país ainda. Nesta sala, país dito fica fora até o fim da partida!"}
+        </Muted>
       )}
       <Spacer />
       <MapBox>
@@ -483,7 +516,13 @@ function BurnOverlay({ burn, room, me }) {
             ? "A batata queimou na sua mão!"
             : `A batata queimou na mão de ${player?.name ?? "alguém"}!`}
         </OverlayText>
-        <OverlayText>{burn.out ? "Saiu da roda 😵" : "Perdeu um coração 💔 Nova rodada!"}</OverlayText>
+        <OverlayText>
+          {burn.out
+            ? "Saiu da roda 😵"
+            : resetsUsed(room)
+              ? "Perdeu um coração 💔 Nova rodada: os países voltam a valer!"
+              : "Perdeu um coração 💔 Os países já ditos continuam fora!"}
+        </OverlayText>
       </Appear>
     </Overlay>
   );
@@ -676,6 +715,7 @@ export default function Online({ finish, area }) {
         error={error}
         onStart={() => act(() => startGame(code))}
         onSpeed={(speed) => act(() => setSpeed(code, speed))}
+        onResetUsed={(reset) => act(() => setResetUsed(code, reset))}
         onBot={() => act(() => addBot(code))}
         onRemove={(id) => act(() => removePlayer(code, id))}
         onExit={exit}
