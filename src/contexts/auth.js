@@ -11,6 +11,7 @@ import {
 import { disableNetwork, doc, enableNetwork, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 
 import { AVATARS, GUEST_AVATAR } from "../data/avatars";
+import { track } from "../services/analytics";
 import { auth, db } from "../services/firebase";
 import { loadJSON, saveJSON } from "../services/storage";
 
@@ -108,6 +109,7 @@ function AuthProvider({ children }) {
       signInWithEmailAndPassword(auth, normalizeEmail(email), password)
     );
     setUser(await loadProfile(account));
+    track("login", { method: "email" });
   }
 
   // Quem está jogando como visitante e cria a conta continua com o mesmo id: o e-mail e a senha são
@@ -139,6 +141,8 @@ function AuthProvider({ children }) {
 
     await rememberProfile(profile);
     setUser(profile);
+    // visitante que cria a conta é a conversão mais importante do funil
+    track("sign_up", { method: visitor ? "guest" : "email" });
   }
 
   async function signInAsGuest({ name, avatar }) {
@@ -147,6 +151,7 @@ function AuthProvider({ children }) {
     await withAuthErrors(writeProfile(account, profile));
     await rememberProfile(profile);
     setUser(profile);
+    track("login", { method: "guest" });
   }
 
   async function signOut() {

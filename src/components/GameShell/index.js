@@ -8,6 +8,7 @@ import Background from "../Background";
 import Bouncy from "../Bouncy";
 import { ProgressContext } from "../../contexts/progress";
 import { SettingsContext } from "../../contexts/settings";
+import { track } from "../../services/analytics";
 import { colors } from "../../theme";
 import Intro from "./Intro";
 import Result from "./Result";
@@ -42,6 +43,7 @@ export default function GameShell({ game, children }) {
     setOutcome(null);
     setRun((current) => current + 1); // muda a key: o tabuleiro é recriado do zero
     setPhase("playing");
+    track("level_start", { level_name: game.id, mode: mode.id });
   }
 
   const finish = useCallback(
@@ -51,6 +53,12 @@ export default function GameShell({ game, children }) {
       const complete = { ...result, casual: !!mode.casual };
       setOutcome({ result: complete, summary: registerResult(game.id, mode.id, complete) });
       setPhase("result");
+      track("level_end", {
+        level_name: game.id,
+        mode: mode.id,
+        success: (complete.stars ?? 0) > 0,
+        score: complete.score ?? 0,
+      });
     },
     [game.id, mode, registerResult]
   );

@@ -3,7 +3,7 @@
 # dependencies
 node_modules/
 
-# Expo
+# Expo (dist/ é o site gerado pelo "expo export", que o firebase deploy publica)
 .expo/
 dist/
 web-build/
@@ -30,13 +30,24 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Windows
+Thumbs.db
+desktop.ini
+
+# local env files (o modelo versionado é o .env.example)
+.env
 .env*.local
 
-# Firebase
+# Firebase: cache do deploy, logs da CLI e dos emuladores, dados exportados dos emuladores
 .firebase/
-firebase-debug.log*
-firestore-debug.log*
+*-debug.log
+firebase-export-*/
+emulator-data/
+
+# Chaves de conta de serviço do Google Cloud dão acesso total ao projeto: nunca vão para o Git
+*service-account*.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
 
 # typescript
 *.tsbuildinfo

@@ -2,12 +2,16 @@
   "hosting": {
     "public": "dist",
     "predeploy": "npx expo export --platform web",
-    "ignore": ["firebase.json", "**/.*"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [
       {
         "source": "**",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        ]
       },
       {
         "source": "/_expo/static/**",
@@ -30,5 +34,11 @@
       "anonymous": true,
       "emailPassword": true
     }
+  },
+  "emulators": {
+    "auth": { "host": "0.0.0.0", "port": 9099 },
+    "firestore": { "host": "0.0.0.0", "port": 8080 },
+    "ui": { "enabled": true, "port": 4000 },
+    "singleProjectMode": true
   }
 }
