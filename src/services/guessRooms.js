@@ -14,9 +14,9 @@ import { deleteField, doc, onSnapshot, runTransaction, serverTimestamp, updateDo
 import { db } from "./firebase";
 import { BOT_AVATAR } from "../data/avatars";
 import { GUESS_QUESTIONS } from "../data/guessQuestions";
-import { RoomError, STALE, newRoomCode, nextSeat, seatsOf, stamp } from "./rooms";
+import { RoomError, STALE, newRoomCode, nextSeat, seatsOf, stamp, trackJoin } from "./rooms";
 
-export { RoomError, normalizeRoomCode, seatsOf } from "./rooms";
+export { HOST_AWAY, RoomError, normalizeRoomCode, seatsOf } from "./rooms";
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 8;
@@ -121,22 +121,27 @@ export async function createRoom(user) {
       );
       return true;
     });
-    if (created) return code;
+    if (created) {
+      trackJoin("chute", code, true);
+      return code;
+    }
   }
   throw new RoomError("Não deu para criar a sala agora. Tente de novo.");
 }
 
-export function joinRoom(code, user) {
-  return runTransaction(db, async (transaction) => {
+export async function joinRoom(code, user) {
+  const joined = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(roomRef(code));
     if (!snapshot.exists()) throw new RoomError("Não achei essa sala. Confira as 4 letras do código!");
     const room = snapshot.data();
-    if (room.players[user.id]) return;
+    if (room.players[user.id]) return false;
     if (!["lobby", "over"].includes(room.status))
       throw new RoomError("Essa partida já começou. Espere acabar e entre de novo!");
     if (Object.keys(room.players).length >= MAX_PLAYERS) throw new RoomError("A sala está cheia (8 jogadores).");
     transaction.update(roomRef(code), stamp({ [`players.${user.id}`]: newPlayer(user, nextSeat(room.players)) }));
+    return true;
   });
+  if (joined) trackJoin("chute", code, false);
 }
 
 // Sai da sala. Se o dono sai, outra pessoa vira dona; sem ninguém de verdade, a sala é apagada.
@@ -314,12 +319,15 @@ export function closePhase(code, status, phaseAt) {
   });
 }
 
-// o dono da sala passa para a próxima pergunta (ou para o placar final, depois da última)
-export function nextRound(code) {
+// O dono da sala passa para a próxima pergunta (ou para o placar final, depois da última). Se ele sumiu,
+// depois de HOST_AWAY a tela deixa qualquer um passar: quem passou vira o dono (e o aparelho dele passa a
+// jogar pelos Bips). Se dois apertam juntos, a transação deixa só o primeiro passar.
+export function nextRound(code, by) {
   return changeRoom(code, (room) => {
-    if (room.status !== "reveal") return null;
-    if (room.round >= room.rounds) return finishGame(room.players);
-    return { ...askQuestion(room.asked), round: room.round + 1 };
+    if (room.status !== "reveal" || !room.players[by]) return null;
+    const host = by === room.host ? {} : { host: by };
+    if (room.round >= room.rounds) return { ...finishGame(room.players), ...host };
+    return { ...askQuestion(room.asked), round: room.round + 1, ...host };
   });
 }
 

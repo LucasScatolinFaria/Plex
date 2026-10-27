@@ -18,6 +18,7 @@ import {
   ANSWER_TIME,
   ESCAPE_POINTS,
   FIND_POINTS,
+  HOST_AWAY,
   MAX_PLAYERS,
   MIN_PLAYERS,
   ROUND_OPTIONS,
@@ -480,10 +481,11 @@ function Outcome({ room, me }) {
   );
 }
 
-function RevealPhase({ room, me, busy, onNext }) {
+// canAdvance: é o dono da sala, ou o dono sumiu e qualquer um pode passar (veja nextRound)
+function RevealPhase({ room, me, busy, canAdvance, onNext }) {
   const question = questionOf(room);
-  const host = room.host === me;
   const far = room.result.far;
+  const hostName = room.players[room.host]?.name ?? "o dono da sala";
 
   return (
     <Phase>
@@ -520,7 +522,8 @@ function RevealPhase({ room, me, busy, onNext }) {
       <Hint>Placar:</Hint>
       <Scores room={room} me={me} />
 
-      {host ? (
+      {canAdvance && room.host !== me ? <Hint>🙈 {hostName} não passou para a próxima. Siga você!</Hint> : null}
+      {canAdvance ? (
         <Button
           title={room.round >= room.rounds ? "Ver o resultado final" : "Próxima pergunta"}
           icon={room.round >= room.rounds ? "trophy" : "arrow-forward"}
@@ -530,7 +533,7 @@ function RevealPhase({ room, me, busy, onNext }) {
           onPress={onNext}
         />
       ) : (
-        <Hint>⏳ Esperando {room.players[room.host]?.name ?? "o dono da sala"} passar para a próxima...</Hint>
+        <Hint>⏳ Esperando {hostName} passar para a próxima...</Hint>
       )}
     </Phase>
   );
@@ -576,10 +579,14 @@ function Board({ finish, area }) {
   const lastPhase = useRef(null);
 
   const timed = room && PHASE_TIME[room.status] && room.phaseAt;
-  const now = useNow(250, !!timed);
+  // no resultado o relógio anda mais devagar, só para notar se o dono da sala sumiu
+  const revealing = room?.status === "reveal";
+  const now = useNow(timed ? 250 : 1000, !!timed || revealing);
   const total = timed ? PHASE_TIME[room.status] : 1;
   const elapsed = timed ? now + clock.current.offset - room.phaseAt : 0;
   const leftMs = Math.max(0, total - elapsed);
+  // o resultado começa na última mudança da sala (updatedAt, na hora do servidor)
+  const hostAway = revealing && !!room.updatedAt && now + clock.current.offset - room.updatedAt > HOST_AWAY;
 
   // "Jogar de novo" recria este tabuleiro: volta para a mesma sala em vez de sair dela
   useEffect(() => {
@@ -768,7 +775,15 @@ function Board({ finish, area }) {
   } else if (room.status === "vote") {
     content = <VotePhase room={room} me={me} code={code} leftMs={leftMs} />;
   } else if (room.status === "reveal") {
-    content = <RevealPhase room={room} me={me} busy={busy} onNext={() => act(() => nextRound(code))} />;
+    content = (
+      <RevealPhase
+        room={room}
+        me={me}
+        busy={busy}
+        canAdvance={room.host === me || hostAway}
+        onNext={() => act(() => nextRound(code, me))}
+      />
+    );
   } else {
     content = (
       <Waiting

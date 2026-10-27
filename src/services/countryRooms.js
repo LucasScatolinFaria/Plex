@@ -8,7 +8,7 @@ import { deleteField, doc, onSnapshot, runTransaction, serverTimestamp, updateDo
 
 import { db } from "./firebase";
 import { BOT_AVATAR } from "../data/avatars";
-import { RoomError, STALE, newRoomCode, nextSeat, seatsOf, stamp } from "./rooms";
+import { RoomError, STALE, newRoomCode, nextSeat, seatsOf, stamp, trackJoin } from "./rooms";
 
 export { RoomError, normalizeRoomCode, seatsOf } from "./rooms";
 
@@ -94,21 +94,26 @@ export async function createRoom(user) {
       );
       return true;
     });
-    if (created) return code;
+    if (created) {
+      trackJoin("paises", code, true);
+      return code;
+    }
   }
   throw new RoomError("Não deu para criar a sala agora. Tente de novo.");
 }
 
-export function joinRoom(code, user) {
-  return runTransaction(db, async (transaction) => {
+export async function joinRoom(code, user) {
+  const joined = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(roomRef(code));
     if (!snapshot.exists()) throw new RoomError("Não achei essa sala. Confira as 4 letras do código!");
     const room = snapshot.data();
-    if (room.players[user.id]) return;
+    if (room.players[user.id]) return false;
     if (room.status === "playing") throw new RoomError("Essa partida já começou. Espere acabar e entre de novo!");
     if (Object.keys(room.players).length >= MAX_PLAYERS) throw new RoomError("A sala está cheia (8 jogadores).");
     transaction.update(roomRef(code), stamp({ [`players.${user.id}`]: newPlayer(user, nextSeat(room.players)) }));
+    return true;
   });
+  if (joined) trackJoin("paises", code, false);
 }
 
 // Sai da sala. Se o dono sai, outra pessoa vira dona; sem ninguém de verdade, a sala é apagada.

@@ -194,7 +194,9 @@ service cloud.firestore {
     function validRoom(code) {
       let data = request.resource.data;
       return data.keys().hasOnly(["code", "host", "status", "speed", "resetUsed", "players", "turn", "turnAt",
-                                  "round", "game", "used", "log", "out", "winner", "lastType", "updatedAt"])
+                                  "round", "game", "used", "log", "out", "winner", "lastType", "updatedAt",
+                                  "expiresAt"])
+        && validExpiry(data)
         && code.matches("[A-Z]{4}") && data.code == code
         && data.status in ["lobby", "playing", "over"]
         && data.speed in [9, 14, 20]
@@ -210,7 +212,7 @@ service cloud.firestore {
     // entrar na sala: a pessoa só se acrescenta na lista de jogadores, fora do meio de uma partida
     function joiningRoom() {
       return resource.data.status != "playing"
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt", "expiresAt"])
         && request.resource.data.players.diff(resource.data.players).affectedKeys().hasOnly([request.auth.uid]);
     }
 
@@ -218,7 +220,9 @@ service cloud.firestore {
     function validGuessRoom(code) {
       let data = request.resource.data;
       return data.keys().hasOnly(["code", "host", "status", "rounds", "round", "question", "asked", "players",
-                                  "answers", "votes", "phaseAt", "result", "game", "winners", "updatedAt"])
+                                  "answers", "votes", "phaseAt", "result", "game", "winners", "updatedAt",
+                                  "expiresAt"])
+        && validExpiry(data)
         && code.matches("[A-Z]{4}") && data.code == code
         && data.status in ["lobby", "answer", "vote", "reveal", "over"]
         && data.rounds in [3, 5, 7]
@@ -233,12 +237,19 @@ service cloud.firestore {
     // entrar na sala: a pessoa só se acrescenta na lista de jogadores, fora do meio de uma partida
     function joiningGuessRoom() {
       return resource.data.status in ["lobby", "over"]
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["players", "updatedAt", "expiresAt"])
         && request.resource.data.players.diff(resource.data.players).affectedKeys().hasOnly([request.auth.uid]);
     }
 
     function staleRoom() {
       return resource.data.updatedAt < request.time - duration.value(3, "h");
+    }
+
+    // Prazo do TTL da sala (stamp em src/services/rooms.js): o Firestore apaga a sala depois dele.
+    // Vem do relógio do aparelho, então só confere o tipo: um relógio errado não pode impedir de jogar.
+    // Sala antiga, de antes do campo, fica sem ele.
+    function validExpiry(data) {
+      return data.get("expiresAt", request.time) is timestamp;
     }
 
     function validRanking() {
